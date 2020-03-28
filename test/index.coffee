@@ -67,29 +67,44 @@ tree = new RBush(4)
 otree = new OriginalRbush(4)
 
 
-getTree = ->
-  tree.all().map(pp)
+move = (item, x, y) ->
+  item.bbox[0] += x
+  item.bbox[1] += y
+  item.bbox[2] += x
+  item.bbox[3] += y
 
-getOTree = ->
-  otree.all().map(pp)
-
-
-for item, i in data
-  tree.insert item.one
-  otree.insert item.two
-  assert.deepEqual getTree(), getOTree()
-
-for i in [6..15]
-  tree.remove data[i].one
-  otree.remove data[i].two
-  assert.deepEqual getTree(), getOTree()
 
 for item, i in data
   tree.insert item.one
   otree.insert item.two
-  assert.deepEqual getTree(), getOTree()
+  assert.deepEqual tree.all().map(pp), otree.all().map(pp)
+
+log tree.all().map(pp)
 
 for i in [6..15]
   tree.remove data[i].one
   otree.remove data[i].two
-  assert.deepEqual getTree(), getOTree()
+  assert.deepEqual tree.all().map(pp), otree.all().map(pp)
+
+
+# from now on we only test our rtree
+data = data.map (d) -> d.one
+
+
+do parentsAreOkay = ->
+  for item in tree.all()
+    assert item.parent
+    assert.equal item.parent.height, (item.height ? 0) + 1
+    assert item.parent.children.includes item
+
+for i in [6..15]
+  tree.insert data[i]
+
+for item, i in data
+  d = if i > data.length / 2 then -i else i
+  move(item, d, d)
+  tree.remove(item)
+  tree.insert(item)
+
+parentsAreOkay()
+log tree.all().map(pp)

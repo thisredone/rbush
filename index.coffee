@@ -1,4 +1,4 @@
-module.exports = class RBush
+export default class RBush
   constructor: (maxEntries = 9) ->
     # max entries in a node is 9 by default; min node fill is 40% for best performance
     @_maxEntries = Math.max(4, maxEntries)
@@ -53,50 +53,13 @@ module.exports = class RBush
     this
 
   remove: (item) ->
-    return this if not item
-
-    node = @data
-    path = []
-    indexes = []
-    i = null
-    parent = null
-    goingUp = null
-
-    # depth-first iterative tree traversal
-    while (node || path.length)
-
-      if !node # go up
-        node = path.pop()
-        parent = path[path.length - 1]
-        i = indexes.pop()
-        goingUp = true
-
-      if node.leaf # check current node
-        index = node.children.indexOf(item)
-
-        if index isnt -1
-          # item found, remove the item and condense tree upwards
-          node.children.splice(index, 1)
-          path.push(node)
-          @_condense(path)
-          return this
-
-      if (!goingUp && !node.leaf && contains(node.bbox, item.bbox)) # go down
-        path.push(node)
-        indexes.push(i)
-        i = 0
-        parent = node
-        node = node.children[0]
-
-      else if (parent) # go right
-        i++
-        node = parent.children[i]
-        goingUp = false
-
-      else
-        node = null # nothing found
-
-    return this
+    parent = item.parent
+    index = parent.children.indexOf(item)
+    if index is -1
+      throw "[Rbush remove] ERROR: parent doesn't have that item"
+    parent.children.splice index, 1
+    @_condense(parent)
+    this
 
   _all: (node, result) ->
     nodesToSearch = []
@@ -107,7 +70,7 @@ module.exports = class RBush
         nodesToSearch.push(...node.children)
 
       node = nodesToSearch.pop()
-    return result
+    result
 
   _chooseSubtree: (bbox, node, level, path) ->
     while true
@@ -149,6 +112,7 @@ module.exports = class RBush
 
     # put the item into the node
     node.children.push(item)
+    item.parent = node
     extend(node.bbox, bbox)
 
     # split on node overflow; propagate upwards if necessary
@@ -179,8 +143,10 @@ module.exports = class RBush
     calcBBox(node)
     calcBBox(newNode)
 
-    if (level)
-      insertPath[level - 1].children.push(newNode)
+    if level
+      parent = insertPath[level - 1]
+      parent.children.push(newNode)
+      newNode.parent = parent
     else
       @_splitRoot(node, newNode)
 
@@ -256,17 +222,21 @@ module.exports = class RBush
       extend path[i].bbox, bbox
     null
 
-  _condense: (path) ->
-    # go through the path, removing empty nodes and updating bboxes
-    for i in [path.length - 1..0]
-      if path[i].children.length is 0
-        if i > 0
-          siblings = path[i - 1].children
-          siblings.splice(siblings.indexOf(path[i]), 1)
+  _condense: (node) ->
+    # go upward, removing empty
+    node = path
+    while node
+      if node.children.length is 0
+        if node.parent?
+          siblings = node.parent.children
+          siblings.splice siblings.indexOf(node), 1
         else
-          @clear()
+          return @clear()
       else
-        calcBBox(path[i])
+        calcBBox(node)
+      node = node.parent
+    null
+
 
 
 # calculate node's bbox from bboxes of its children
@@ -321,7 +291,10 @@ intersects = (a, b) ->
 
 
 createNode = (children) ->
-  children: children
-  height: 1,
-  leaf: true,
-  bbox: [Infinity, Infinity, -Infinity, -Infinity]
+  node =
+    children: children
+    height: 1,
+    leaf: true,
+    bbox: [Infinity, Infinity, -Infinity, -Infinity]
+  children?.forEach (c) -> c.parent = node
+  node

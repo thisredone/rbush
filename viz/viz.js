@@ -13,12 +13,12 @@ if (window.devicePixelRatio > 1) {
 function randBox(size) {
     var x = Math.random() * (W - size),
         y = Math.random() * (W - size);
-    return {
-        minX: x,
-        minY: y,
-        maxX: x + size * Math.random(),
-        maxY: y + size * Math.random()
-    };
+    return { bbox: [
+        x,
+        y,
+        x + size * Math.random(),
+        y + size * Math.random()
+    ]};
 }
 
 function randClusterPoint(dist) {
@@ -31,11 +31,12 @@ function randClusterBox(cluster, dist, size) {
     var x = cluster.x - dist + 2 * dist * (Math.random() + Math.random() + Math.random()) / 3,
         y = cluster.y - dist + 2 * dist * (Math.random() + Math.random() + Math.random()) / 3;
 
-    return {
-        minX: x,
-        minY: y,
-        maxX: x + size * Math.random(),
-        maxY: y + size * Math.random(),
+    return { bbox: [
+            x,
+            y,
+            x + size * Math.random(),
+            y + size * Math.random(),
+        ],
         item: true
     };
 }
@@ -51,10 +52,10 @@ function drawTree(node, level) {
     rect.push(level ? colors[(node.height - 1) % colors.length] : 'grey');
     rect.push(level ? 1 / Math.pow(level, 1.2) : 0.2);
     rect.push([
-        Math.round(node.minX),
-        Math.round(node.minY),
-        Math.round(node.maxX - node.minX),
-        Math.round(node.maxY - node.minY)
+        Math.round(node.bbox[0]),
+        Math.round(node.bbox[1]),
+        Math.round(node.bbox[2] - node.bbox[0]),
+        Math.round(node.bbox[3] - node.bbox[1])
     ]);
 
     rects.push(rect);
@@ -82,17 +83,17 @@ function draw() {
 
 function search(e) {
     console.time('1 pixel search');
-    tree.search({
-        minX: e.clientX,
-        minY: e.clientY,
-        maxX: e.clientX + 1,
-        maxY: e.clientY + 1
-    });
+    tree.search([
+        e.clientX,
+        e.clientY,
+        e.clientX + 1,
+        e.clientY + 1
+    ]);
     console.timeEnd('1 pixel search');
 }
 
 function remove() {
-    data.sort(tree.compareMinX);
+    data.sort((a, b) => a.bbox[0] - b.bbox[0]);
     console.time('remove 10000');
     for (var i = 0; i < 10000; i++) {
         tree.remove(data[i]);
@@ -103,3 +104,30 @@ function remove() {
 
     draw();
 };
+
+
+function removeHalf() {
+    console.time('remove half');
+    let del = false,
+        left = [];
+    for (let item of data) {
+        if (del) {
+            tree.remove(item);
+        } else {
+            left.push(item);
+        }
+        del = !del;
+    }
+    data = left;
+    console.timeEnd('remove half');
+    draw();
+};
+
+
+function move() {
+    console.time('move all');
+
+
+    console.timeEnd('move all');
+    draw();
+}

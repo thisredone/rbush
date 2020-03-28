@@ -18,7 +18,7 @@
   "author": "Vladimir Agafonkin",
   "license": "MIT",
   "main": "rbush.js",
-  "module": "index.js",
+  "module": "index.coffee",
   "browser": "rbush.min.js",
   "jsdelivr": "rbush.min.js",
   "unpkg": "rbush.min.js",
@@ -39,7 +39,7 @@
     "test": "mocha -wr coffeescript/register --watch-extensions js,coffee \"test/*.js\"",
     "perf": "node -r esm ./bench/perf.js",
     "cov": "c8 npm run test",
-    "build": "rollup -c",
+    "build": "coffee --bare -c . && rollup -c",
     "prepublishOnly": "npm run test && npm run build"
   },
   "files": [
