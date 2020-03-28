@@ -124,10 +124,32 @@ function removeHalf() {
 };
 
 
-function move() {
-    console.time('move all');
+let interval;
+
+function startMoving() {
+    console.log('started moving')
+    const items = data.slice(0, 2000);
+    interval = setInterval(() => {
+        // console.time('movement update')
+        for (let item of items) {
+            if (!item.dir || Math.random() < 0.005) {
+                item.dir = [Math.random() * 3 - 1.5, Math.random() * 3 - 1.5]
+            }
+            var bb = item.bbox;
+            bb[0] += item.dir[0];
+            bb[1] += item.dir[1];
+            bb[2] += item.dir[0];
+            bb[3] += item.dir[1];
+            if (bb[0] < 0 || bb[2] > 700) item.dir[0] *= -1
+            if (bb[1] < 0 || bb[3] > 700) item.dir[1] *= -1
+            tree.update(item);
+        }
+        // console.timeEnd('movement update')
+        draw();
+    }, 25);
+}
 
 
-    console.timeEnd('move all');
-    draw();
+function stopMoving() {
+    clearInterval(interval);
 }

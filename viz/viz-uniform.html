@@ -8,6 +8,9 @@
 <button id="remove">Remove leftmost 10000</button>
 <button id="remove2">Remove every other</button>
 
+<button id="move">start moving</button>
+<button id="stop">stop moving</button>
+
 <script src="../rbush.js"></script>
 <script src="viz.js"></script>
 <script>
@@ -48,5 +51,8 @@ document.getElementById('insert2').onclick = genInsertOneByOne(1000);
 document.getElementById('canvas').onclick = search;
 document.getElementById('remove').onclick = remove;
 document.getElementById('remove2').onclick = removeHalf;
+
+document.getElementById('move').onclick = startMoving();
+document.getElementById('stop').onclick = stopMoving();
 
 </script>

@@ -44,6 +44,12 @@ export default class RBush
 
     return false
 
+  update: (item) ->
+    if contains(item.parent.bbox, item.bbox)
+      return
+    @remove(item)
+    @insert(item)
+
   insert: (item) ->
     @_insert(item, @data.height - 1) if item
     this
@@ -224,7 +230,6 @@ export default class RBush
 
   _condense: (node) ->
     # go upward, removing empty
-    node = path
     while node
       if node.children.length is 0
         if node.parent?
@@ -236,7 +241,6 @@ export default class RBush
         calcBBox(node)
       node = node.parent
     null
-
 
 
 # calculate node's bbox from bboxes of its children

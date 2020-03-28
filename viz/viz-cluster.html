@@ -5,9 +5,11 @@
 <br>
 <button id="insert1">Insert 50000</button>
 <button id="insert2">Insert 1000</button>
-<button id="insert3">Bulk-insert 50000</button>
-<button id="insert4">Bulk-insert 1000</button>
 <button id="remove">Remove leftmost 10000</button>
+<button id="remove2">Remove every other</button>
+
+<button id="move">start moving</button>
+<button id="stop">stop moving</button>
 
 <script src="../rbush.js"></script>
 <script src="viz.js"></script>
@@ -33,7 +35,7 @@ function genData(N, M, R) {
 var tree = new RBush(16);
 var data = [];
 
-genBulkInsert(N, M)();
+genInsertOneByOne(N, M)();
 
 function genInsertOneByOne(K, M) {
     return function () {
@@ -51,25 +53,14 @@ function genInsertOneByOne(K, M) {
     };
 }
 
-function genBulkInsert(K, M) {
-    return function () {
-        var data2 = genData(K, M, R);
-
-        console.time('bulk-insert ' + K + ' items');
-        tree.load(data2);
-        console.timeEnd('bulk-insert ' + K + ' items');
-
-        data = data.concat(data2);
-
-        draw();
-    };
-}
 
 document.getElementById('insert1').onclick = genInsertOneByOne(50000, M);
 document.getElementById('insert2').onclick = genInsertOneByOne(1000, 1);
-document.getElementById('insert3').onclick = genBulkInsert(50000, M);
-document.getElementById('insert4').onclick = genBulkInsert(1000, 1);
 document.getElementById('canvas').onclick = search;
 document.getElementById('remove').onclick = remove;
+document.getElementById('remove2').onclick = removeHalf;
+
+document.getElementById('move').onclick = startMoving;
+document.getElementById('stop').onclick = stopMoving;
 
 </script>
