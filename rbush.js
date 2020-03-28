@@ -80,9 +80,11 @@ var index = RBush = /*@__PURE__*/(function () {
   };
 
   RBush.prototype.insert = function insert (item) {
-    if (item) {
-      this._insert(item, this.data.height - 1);
+    if (!(item != null ? item.bbox : void 0)) {
+      log("[RBush::insert] can't add without bbox", item);
+      return;
     }
+    this._insert(item, this.data.height - 1);
     return this;
   };
 

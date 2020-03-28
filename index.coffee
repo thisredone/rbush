@@ -51,7 +51,10 @@ export default class RBush
     @insert(item)
 
   insert: (item) ->
-    @_insert(item, @data.height - 1) if item
+    unless item?.bbox
+      log "[RBush::insert] can't add without bbox", item
+      return
+    @_insert(item, @data.height - 1)
     this
 
   clear: ->
