@@ -26,8 +26,7 @@ class ObjectStorage
     null
 
 
-# export default class RBush
-module.exports = class RBush
+class RBush
   constructor: (maxEntries = 9) ->
     # max entries in a node is 9 by default; min node fill is 40% for best performance
     @_maxEntries = Math.max(4, maxEntries)
@@ -40,20 +39,20 @@ module.exports = class RBush
   all: ->
     @_all(@data, [])
 
-  search: (bbox) ->
+  search: (bbox, predicate) ->
     node = @data
     result = []
-    return result if not intersects(bbox, node)
-
+    return result if not intersects(bbox, node.bbox)
     nodesToSearch = []
 
     while node
-      for child in node.children
+      for child in node.children when not child._ignore
         if intersects(bbox, child.bbox)
           if node.leaf
-            result.push(child)
+            if !predicate? or predicate(child)
+              result.push(child)
           else if contains(bbox, child.bbox)
-            @_all(child, result)
+            @_all(child, result, predicate)
           else
             nodesToSearch.push(child)
       node = nodesToSearch.pop()
@@ -97,7 +96,7 @@ module.exports = class RBush
     parent = item.parent
     index = parent.children.indexOf(item)
     if index is -1
-      throw "[Rbush remove] ERROR: parent doesn't have that item"
+      throw "[RBush remove] ERROR: parent doesn't have that item"
     parent.children.splice index, 1
     unless item.isStatic
       @nonStatic.remove(item)
@@ -118,7 +117,7 @@ module.exports = class RBush
       other[newIndex++] = item if swapping
       item._colRunId = @_collisionRunId
 
-      for c in item.parent.children when c._colRunId isnt @_collisionRunId
+      for c in item.parent.children when not c._ignore and c._colRunId isnt @_collisionRunId
         if intersects(item.bbox, c.bbox)
           cb item, c
       null
@@ -127,11 +126,13 @@ module.exports = class RBush
       @nonStatic.swap(newIndex)
     null
 
-  _all: (node, result) ->
+  _all: (node, result, predicate) ->
     nodesToSearch = []
-    while (node)
-      if (node.leaf)
-        result.push(...node.children)
+    while node
+      if node.leaf
+        for child in node.children when not child._ignore
+          if !predicate? or predicate(child)
+            result.push(child)
       else
         nodesToSearch.push(...node.children)
 
@@ -159,9 +160,9 @@ module.exports = class RBush
           minArea = if area < minArea then area else minArea
           targetNode = child
 
-        else if (enlargement is minEnlargement)
+        else if enlargement is minEnlargement
           # otherwise choose one with the smallest area
-          if (area < minArea)
+          if area < minArea
             minArea = area
             targetNode = child
 
@@ -183,8 +184,8 @@ module.exports = class RBush
     extend(node.bbox, bbox)
 
     # split on node overflow; propagate upwards if necessary
-    while (level >= 0)
-      if (insertPath[level].children.length > @_maxEntries)
+    while level >= 0
+      if insertPath[level].children.length > @_maxEntries
         @_split(insertPath, level)
         level--
       else
@@ -366,3 +367,6 @@ createNode = (children) ->
   if children?
     c.parent = node for c in children
   node
+
+
+export default RBush
