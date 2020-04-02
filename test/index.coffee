@@ -5,12 +5,12 @@ assert = require 'assert'
 
 
 global.pp = (node) ->
-  if node.bbox?
-    node.bbox.join(', ')
-  else
-    { minX, minY, maxX, maxY } = node
-    [minX, minY, maxX, maxY].join(', ')
+  [node.id, node.bbox...].join(', ')
 
+Math.randomIntBetween = (min, max) ->
+  Math.floor(Math.random() * (max - min + 1)) + min
+
+id = 0
 
 data = [
   [0,0,0,0],[10,10,10,10],[20,20,20,20],[25,0,25,0],[35,10,35,10],[45,20,45,20],[0,25,0,25],[10,35,10,35],
@@ -19,15 +19,10 @@ data = [
   [0,50,0,50],[10,60,10,60],[20,70,20,70],[25,50,25,50],[35,60,35,60],[45,70,45,70],[0,75,0,75],[10,85,10,85],
   [20,95,20,95],[25,75,25,75],[35,85,35,85],[45,95,45,95],[50,50,50,50],[60,60,60,60],[70,70,70,70],[75,50,75,50],
   [85,60,85,60],[95,70,95,70],[50,75,50,75],[60,85,60,85],[70,95,70,95],[75,75,75,75],[85,85,85,85],[95,95,95,95]
-].map ([minX, minY, maxX, maxY]) ->
-  one: { bbox: [minX, minY, maxX, maxY] }
-  two: { minX, minY, maxX, maxY }
+].map (bbox) -> { bbox, id: ++id }
 
-
-OriginalRbush = require '../rbush.js'
 
 tree = new RBush(4)
-otree = new OriginalRbush(4)
 
 
 move = (item, x, y) ->
@@ -38,20 +33,12 @@ move = (item, x, y) ->
 
 
 for item, i in data
-  tree.insert item.one
-  otree.insert item.two
-  assert.deepEqual tree.all().map(pp), otree.all().map(pp)
+  tree.insert item
 
 log tree.all().map(pp)
 
 for i in [6..15]
-  tree.remove data[i].one
-  otree.remove data[i].two
-  assert.deepEqual tree.all().map(pp), otree.all().map(pp)
-
-
-# from now on we only test our rtree
-data = data.map (d) -> d.one
+  tree.remove data[i]
 
 
 do parentsAreOkay = ->
@@ -59,6 +46,7 @@ do parentsAreOkay = ->
     assert item.parent
     assert.equal item.parent.height, (item.height ? 0) + 1
     assert item.parent.children.includes item
+
 
 for i in [6..15]
   tree.insert data[i]
@@ -71,3 +59,5 @@ for item, i in data
 
 parentsAreOkay()
 log tree.all().map(pp)
+
+tree.checkCollisions (o1, o2) -> log pp(o1), 'with', pp(o2)

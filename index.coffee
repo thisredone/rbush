@@ -1,8 +1,40 @@
-export default class RBush
+MAX_REMOVALS_BEFORE_SWAP = 50
+
+
+class ObjectStorage
+  constructor: ->
+    @size = 500
+    @current = @arr1 = new Array(@size)
+    @other = @arr2 = new Array(@size)
+    @currentLen = 0
+    @removalsCount = 0
+
+  add: (item) ->
+    @enlarge() if @currentLen is @size
+    @current[@currentLen++] = item
+
+  remove: (item) ->
+    item._removed = true
+    @removalsCount++
+
+  enlarge: ->
+    @size = Math.floor(@size * 1.5)
+    @current.length = @other.length = @size
+
+  swap: (@currentLen) ->
+    [@current, @other, @removalsCount] = [@other, @current, 0]
+    null
+
+
+# export default class RBush
+module.exports = class RBush
   constructor: (maxEntries = 9) ->
     # max entries in a node is 9 by default; min node fill is 40% for best performance
     @_maxEntries = Math.max(4, maxEntries)
     @_minEntries = Math.max(2, Math.ceil(@_maxEntries * 0.4))
+    @_collisionRunId = 0
+    @_stacks = [0..8].map -> Array(maxEntries)
+    @nonStatic = new ObjectStorage
     @clear()
 
   all: ->
@@ -11,17 +43,16 @@ export default class RBush
   search: (bbox) ->
     node = @data
     result = []
-
     return result if not intersects(bbox, node)
 
     nodesToSearch = []
 
-    while (node)
+    while node
       for child in node.children
-        if (intersects(bbox, child.bbox))
-          if (node.leaf)
+        if intersects(bbox, child.bbox)
+          if node.leaf
             result.push(child)
-          else if (contains(bbox, child.bbox))
+          else if contains(bbox, child.bbox)
             @_all(child, result)
           else
             nodesToSearch.push(child)
@@ -31,7 +62,6 @@ export default class RBush
 
   collides: (bbox) ->
     node = @data
-
     return false if not intersects(bbox, node)
 
     nodesToSearch = []
@@ -55,6 +85,8 @@ export default class RBush
       log "[RBush::insert] can't add without bbox", item
       return
     @_insert(item, @data.height - 1)
+    unless item.isStatic
+      @nonStatic.add(item)
     this
 
   clear: ->
@@ -67,8 +99,33 @@ export default class RBush
     if index is -1
       throw "[Rbush remove] ERROR: parent doesn't have that item"
     parent.children.splice index, 1
+    unless item.isStatic
+      @nonStatic.remove(item)
     @_condense(parent)
     this
+
+  checkCollisions: (cb) ->
+    @_collisionRunId = 0 if ++@_collisionRunId > 99999
+    { other, current, currentLen, removalsCount } = @nonStatic
+
+    if removalsCount > MAX_REMOVALS_BEFORE_SWAP
+      swapping = true
+      newIndex = 0
+
+    for index in [0 ... currentLen]
+      item = current[index]
+      continue if item._removed
+      other[newIndex++] = item if swapping
+      item._colRunId = @_collisionRunId
+
+      for c in item.parent.children when c._colRunId isnt @_collisionRunId
+        if intersects(item.bbox, c.bbox)
+          cb item, c
+      null
+
+    if swapping
+      @nonStatic.swap(newIndex)
+    null
 
   _all: (node, result) ->
     nodesToSearch = []
@@ -85,7 +142,7 @@ export default class RBush
     while true
       path.push(node)
 
-      if (node.leaf || path.length - 1 is level)
+      if node.leaf or path.length - 1 is level
         break
 
       minArea = Infinity
@@ -113,6 +170,7 @@ export default class RBush
     return node
 
   _insert: (item, level, isNode) ->
+    delete item._removed
     bbox = item.bbox
     insertPath = []
 
@@ -163,6 +221,8 @@ export default class RBush
     # split root node
     @data = createNode([node, newNode])
     @data.height = node.height + 1
+    if @data.height is @_stacks.length
+      @_stacks.push Array(@_maxEntries)
     @data.leaf = false
     calcBBox(@data)
 
@@ -303,5 +363,6 @@ createNode = (children) ->
     height: 1,
     leaf: true,
     bbox: [Infinity, Infinity, -Infinity, -Infinity]
-  children?.forEach (c) -> c.parent = node
+  if children?
+    c.parent = node for c in children
   node
