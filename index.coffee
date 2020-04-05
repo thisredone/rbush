@@ -62,6 +62,7 @@ class RBush
     @_minEntries = Math.max(2, Math.ceil(@_maxEntries * 0.4))
     @_collisionRunId = 0
     @_stacks = [0..8].map -> new SortableStack(maxEntries)
+    @raycastResponse = dist: Infinity, item: null
     @nonStatic = new ObjectStorage(500)
     @clear()
 
@@ -156,9 +157,9 @@ class RBush
       @nonStatic.swap(newIndex)
     null
 
-  # _rayObjectDistance: (distToBbox, origin, dir, dstX, dstY, range, object) ->
+  # _rayObjectDistance: (distToBbox, origin, dir, dstX, dstY, range, item) ->
 
-  raycast: (out, origin, dir, range = Infinity, predicate) ->
+  raycast: (origin, dir, range = Infinity, predicate) ->
     node = @data
 
     invDirx = 1 / dir.x
@@ -199,9 +200,9 @@ class RBush
           break
         node = node.parent
 
-    out[0] = item
-    out[1] = tmin
-    out
+    @raycastResponse.dist = tmin
+    @raycastResponse.item = item
+    @raycastResponse
 
   _all: (node, result, predicate) ->
     nodesToSearch = []
@@ -462,5 +463,5 @@ createNode = (children) ->
   node
 
 
-export default RBush
-# module.exports = RBush
+# export default RBush
+module.exports = RBush

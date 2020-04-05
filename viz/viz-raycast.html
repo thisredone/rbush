@@ -86,11 +86,8 @@ function raycast(e, force) {
         y *= invLength;
     }
 
-    var out = Array(2);
-
     console.time('raycast');
-    tree.raycast(out, rayPos, { x, y }, 300);
-    let [item, dist] = out;
+    let { dist, item } = tree.raycast(rayPos, { x, y }, 300);
     console.timeEnd('raycast');
     draw();
     if (item) {
