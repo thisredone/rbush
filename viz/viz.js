@@ -47,21 +47,23 @@ var colors = ['#f40', '#0b0', '#37f'],
 function drawTree(node, level) {
     if (!node) { return; }
 
-    var rect = [];
+    var rect = [],
+        alpha = level ? 0.8 / Math.pow(level, 1.2) : 0.2;
 
     rect.push(level ? colors[(node.height - 1) % colors.length] : 'grey');
-    rect.push(level ? 1 / Math.pow(level, 1.2) : 0.2);
+    rect.push(alpha);
     rect.push([
         Math.round(node.bbox[0]),
         Math.round(node.bbox[1]),
         Math.round(node.bbox[2] - node.bbox[0]),
         Math.round(node.bbox[3] - node.bbox[1])
     ]);
+    rect.push(node.item);
 
     rects.push(rect);
 
-    if (node.leaf) return;
-    if (level === 6) { return; }
+    if (node.item) { return; }
+    if (level === 9) { return; }
 
     for (var i = 0; i < node.children.length; i++) {
         drawTree(node.children[i], level + 1);
@@ -77,7 +79,10 @@ function draw() {
     for (var i = rects.length - 1; i >= 0; i--) {
         ctx.strokeStyle = rects[i][0];
         ctx.globalAlpha = rects[i][1];
-        ctx.strokeRect.apply(ctx, rects[i][2]);
+        if (rects[i][3])
+            ctx.fillRect.apply(ctx, rects[i][2]);
+        else
+            ctx.strokeRect.apply(ctx, rects[i][2]);
     }
 }
 

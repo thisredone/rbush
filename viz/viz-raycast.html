@@ -1,0 +1,129 @@
+<!doctype html>
+
+<title>RBush Tree Visualization</title>
+<canvas id="canvas" width="701" height="701"></canvas>
+<br>
+<button id="insert1">Insert 50000</button>
+<button id="insert2">Insert 1000</button>
+<button id="remove">Remove leftmost 10000</button>
+<button id="remove2">Remove every other</button>
+
+<button id="move">start moving</button>
+<button id="stop">stop moving</button>
+
+<script src="../rbush.js"></script>
+<script src="viz.js"></script>
+<script>
+
+var N = 400,
+    M = 150,
+    R = 200;
+
+function genData(N, M, R) {
+    var data = [];
+    for (var i = 0; i < M; i++) {
+        var cluster = randClusterPoint(R);
+        var size = Math.min(Math.ceil(N / M), N - data.length);
+
+        for (var j = 0; j < size; j++) {
+            data.push(randClusterBox(cluster, R, 20));
+        }
+    }
+    return data;
+}
+
+var tree = new RBush(4);
+var data = [];
+var rayPos = null;
+var mouse = null;
+
+genInsertOneByOne(N, M)();
+
+function genInsertOneByOne(K, M) {
+    return function () {
+        var data2 = genData(K, M, R);
+
+        console.time('insert ' + K + ' items');
+        for (var i = 0; i < K; i++) {
+            tree.insert(data2[i]);
+        }
+        console.timeEnd('insert ' + K + ' items');
+
+        data = data.concat(data2);
+
+        draw();
+    };
+}
+
+
+function raystart(e) {
+    var rect = canvas.getBoundingClientRect();
+    rayPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    // setTimeout(() => {
+    //     raycast(null, true);
+    // }, 1500);
+}
+
+function raycast(e, force) {
+    if (!rayPos) return;
+
+    // if (force) {
+    //     e = { clientX: mouse.x, clientY: mouse.y };
+    // } else {
+    //     mouse = { x: e.clientX, y: e.clientY };
+    //     return;
+    // }
+
+    var rect = canvas.getBoundingClientRect();
+
+    var x = e.clientX - rect.left - rayPos.x,
+        y = e.clientY - rect.top - rayPos.y;
+
+    var lengthSq = x * x + y * y;
+    if (lengthSq > 0) {
+        var invLength = 1 / Math.sqrt(lengthSq);
+        x *= invLength;
+        y *= invLength;
+    }
+
+    console.time('raycast');
+    let { dist, item } = tree.raycast(rayPos, { x, y }, 300);
+    console.timeEnd('raycast');
+    draw();
+    if (item) {
+        ctx.strokeStyle = 'blue';
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(
+            Math.round(item.bbox[0]),
+            Math.round(item.bbox[1]),
+            Math.round(item.bbox[2] - item.bbox[0]),
+            Math.round(item.bbox[3] - item.bbox[1]));
+    }
+    if (dist === Infinity) {
+        dist = 50;
+    }
+
+    x = rayPos.x + x * dist;
+    y = rayPos.y + y * dist;
+    ctx.beginPath();
+    ctx.moveTo(rayPos.x, rayPos.y);
+    ctx.strokeStyle = 'black';
+    ctx.globalAlpha = 1;
+    ctx.lineTo(Math.round(x), Math.round(y));
+    ctx.stroke();
+}
+
+
+document.getElementById('insert1').onclick = genInsertOneByOne(50000, M);
+document.getElementById('insert2').onclick = genInsertOneByOne(1000, 1);
+document.getElementById('remove').onclick = remove;
+document.getElementById('remove2').onclick = removeHalf;
+
+document.getElementById('canvas').onclick = raystart;
+document.getElementById('canvas').onmousemove = raycast;
+
+document.getElementById('move').onclick = startMoving;
+document.getElementById('stop').onclick = stopMoving;
+
+</script>

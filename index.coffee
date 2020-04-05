@@ -1,29 +1,58 @@
 MAX_REMOVALS_BEFORE_SWAP = 50
 
 
-class ObjectStorage
-  constructor: ->
-    @size = 500
-    @current = @arr1 = new Array(@size)
-    @other = @arr2 = new Array(@size)
+class DoubleArray
+  constructor: (@size = 8) ->
+    @current = new Array(@size)
+    @other = new Array(@size)
     @currentLen = 0
-    @removalsCount = 0
 
-  add: (item) ->
+  push: (item, item2) ->
     @enlarge() if @currentLen is @size
+    @other[@currentLen] = item2 if item2?
     @current[@currentLen++] = item
 
-  remove: (item) ->
-    item._removed = true
-    @removalsCount++
+  pop: ->
+    @current[--@currentLen] if @currentLen > 0
 
   enlarge: ->
     @size = Math.floor(@size * 1.5)
     @current.length = @other.length = @size
 
+
+class ObjectStorage extends DoubleArray
+  constructor: ->
+    super(arguments...)
+    @removalsCount = 0
+
+  remove: (item) ->
+    item._removed = true
+    @removalsCount++
+
   swap: (@currentLen) ->
     [@current, @other, @removalsCount] = [@other, @current, 0]
     null
+
+
+class SortableStack extends DoubleArray
+  push: (item, value) ->
+    @enlarge() if @currentLen is @size
+    pos = 0
+
+    while pos < @currentLen
+      if value > @other[pos]
+        break
+      else
+        pos++
+
+    while pos <= @currentLen
+      [newItem, newValue] = [@current[pos], @other[pos]]
+      @current[pos] = item
+      @other[pos] = value
+      [item, value] = [newItem, newValue]
+      pos++
+
+    @currentLen++
 
 
 class RBush
@@ -32,8 +61,8 @@ class RBush
     @_maxEntries = Math.max(4, maxEntries)
     @_minEntries = Math.max(2, Math.ceil(@_maxEntries * 0.4))
     @_collisionRunId = 0
-    @_stacks = [0..8].map -> Array(maxEntries)
-    @nonStatic = new ObjectStorage
+    @_stacks = [0..8].map -> new SortableStack(maxEntries)
+    @nonStatic = new ObjectStorage(500)
     @clear()
 
   all: ->
@@ -85,7 +114,7 @@ class RBush
       return
     @_insert(item, @data.height - 1)
     unless item.isStatic
-      @nonStatic.add(item)
+      @nonStatic.push(item)
     this
 
   clear: ->
@@ -93,6 +122,7 @@ class RBush
     this
 
   remove: (item) ->
+    return unless item?
     parent = item.parent
     index = parent.children.indexOf(item)
     if index is -1
@@ -125,6 +155,43 @@ class RBush
     if swapping
       @nonStatic.swap(newIndex)
     null
+
+  raycast: (origin, dir, range = Infinity, predicate) ->
+    node = @data
+
+    invDirx = 1 / dir.x
+    invDiry = 1 / dir.y
+
+    tmin = Infinity
+    item = null
+
+    for stack in @_stacks
+      stack.currentLen = 0
+
+    while node
+      stack = @_stacks[node.height]
+
+      if node.leaf
+        for child in node.children when not child._ignore
+          if not predicate? or predicate(child)
+            t = rayBboxDistance(origin.x, origin.y, invDirx, invDiry, child.bbox)
+            if t < range and t < tmin
+              tmin = t
+              item = child
+      else
+        for child in node.children when not child._ignore
+          t = rayBboxDistance(origin.x, origin.y, invDirx, invDiry, child.bbox)
+          if t < range and t < tmin
+            stack.push child, t
+
+      while node
+        popped = @_stacks[node.height].pop()
+        if popped
+          node = popped
+          break
+        node = node.parent
+
+    { item, dist: tmin }
 
   _all: (node, result, predicate) ->
     nodesToSearch = []
@@ -223,7 +290,7 @@ class RBush
     @data = createNode([node, newNode])
     @data.height = node.height + 1
     if @data.height is @_stacks.length
-      @_stacks.push Array(@_maxEntries)
+      @_stacks.push new SortableStack(@_maxEntries)
     @data.leaf = false
     calcBBox(@data)
 
@@ -358,6 +425,22 @@ intersects = (a, b) ->
   b[0] <= a[2] && b[1] <= a[3] && b[2] >= a[0] && b[3] >= a[1]
 
 
+rayBboxDistance = (x, y, invdx, invdy, bbox) ->
+  tx1 = (bbox[0] - x) * invdx
+  tx2 = (bbox[2] - x) * invdx
+
+  tmin = Math.min(tx1, tx2)
+  tmax = Math.max(tx1, tx2)
+
+  ty1 = (bbox[1] - y) * invdy
+  ty2 = (bbox[3] - y) * invdy
+
+  tmin = Math.max(tmin, Math.min(ty1, ty2))
+  tmax = Math.min(tmax, Math.max(ty1, ty2))
+
+  if tmax > Math.max(tmin, 0) then tmin else Infinity
+
+
 createNode = (children) ->
   node =
     children: children
@@ -370,3 +453,4 @@ createNode = (children) ->
 
 
 export default RBush
+# module.exports = RBush

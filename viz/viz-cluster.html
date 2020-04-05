@@ -15,9 +15,9 @@
 <script src="viz.js"></script>
 <script>
 
-var N = 100000,
-    M = 30,
-    R = 100;
+var N = 400,
+    M = 150,
+    R = 200;
 
 function genData(N, M, R) {
     var data = [];
@@ -26,13 +26,13 @@ function genData(N, M, R) {
         var size = Math.min(Math.ceil(N / M), N - data.length);
 
         for (var j = 0; j < size; j++) {
-            data.push(randClusterBox(cluster, R, 1));
+            data.push(randClusterBox(cluster, R, 20));
         }
     }
     return data;
 }
 
-var tree = new RBush(16);
+var tree = new RBush(6);
 var data = [];
 
 genInsertOneByOne(N, M)();
