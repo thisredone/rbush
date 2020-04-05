@@ -32,7 +32,7 @@ function genData(N, M, R) {
     return data;
 }
 
-var tree = new RBush(4);
+var tree = new RBush(9);
 var data = [];
 var rayPos = null;
 var mouse = null;
@@ -86,8 +86,11 @@ function raycast(e, force) {
         y *= invLength;
     }
 
+    var out = Array(2);
+
     console.time('raycast');
-    let { dist, item } = tree.raycast(rayPos, { x, y }, 300);
+    tree.raycast(out, rayPos, { x, y }, 300);
+    let [item, dist] = out;
     console.timeEnd('raycast');
     draw();
     if (item) {

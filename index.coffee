@@ -156,11 +156,16 @@ class RBush
       @nonStatic.swap(newIndex)
     null
 
-  raycast: (origin, dir, range = Infinity, predicate) ->
+  # _rayObjectDistance: (distToBbox, origin, dir, dstX, dstY, range, object) ->
+
+  raycast: (out, origin, dir, range = Infinity, predicate) ->
     node = @data
 
     invDirx = 1 / dir.x
     invDiry = 1 / dir.y
+
+    dstX = origin.x + dir.x * range
+    dstY = origin.y + dir.y * range
 
     tmin = Infinity
     item = null
@@ -176,8 +181,11 @@ class RBush
           if not predicate? or predicate(child)
             t = rayBboxDistance(origin.x, origin.y, invDirx, invDiry, child.bbox)
             if t < range and t < tmin
-              tmin = t
-              item = child
+              if @_rayObjectDistance?
+                t = @_rayObjectDistance(t, origin, dir, dstX, dstY, range, child)
+              if t < range and t < tmin
+                tmin = t
+                item = child
       else
         for child in node.children when not child._ignore
           t = rayBboxDistance(origin.x, origin.y, invDirx, invDiry, child.bbox)
@@ -191,7 +199,9 @@ class RBush
           break
         node = node.parent
 
-    { item, dist: tmin }
+    out[0] = item
+    out[1] = tmin
+    out
 
   _all: (node, result, predicate) ->
     nodesToSearch = []

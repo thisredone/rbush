@@ -259,13 +259,16 @@ RBush = /*@__PURE__*/(function () {
     return null;
   };
 
-  RBush.prototype.raycast = function raycast (origin, dir, range, predicate) {
+  // _rayObjectDistance: (distToBbox, origin, dir, dstX, dstY, range, object) ->
+  RBush.prototype.raycast = function raycast (out, origin, dir, range, predicate) {
     if ( range === void 0 ) range = 2e308;
 
-    var child, invDirx, invDiry, item, j, l, len, len1, len2, n, node, popped, ref, ref1, ref2, stack, t, tmin;
+    var child, dstX, dstY, invDirx, invDiry, item, j, l, len, len1, len2, n, node, popped, ref, ref1, ref2, stack, t, tmin;
     node = this.data;
     invDirx = 1 / dir.x;
     invDiry = 1 / dir.y;
+    dstX = origin.x + dir.x * range;
+    dstY = origin.y + dir.y * range;
     tmin = 2e308;
     item = null;
     ref = this._stacks;
@@ -283,8 +286,13 @@ RBush = /*@__PURE__*/(function () {
             if ((predicate == null) || predicate(child)) {
               t = rayBboxDistance(origin.x, origin.y, invDirx, invDiry, child.bbox);
               if (t < range && t < tmin) {
-                tmin = t;
-                item = child;
+                if (this._rayObjectDistance != null) {
+                  t = this._rayObjectDistance(t, origin, dir, dstX, dstY, range, child);
+                }
+                if (t < range && t < tmin) {
+                  tmin = t;
+                  item = child;
+                }
               }
             }
           }
@@ -311,10 +319,9 @@ RBush = /*@__PURE__*/(function () {
         node = node.parent;
       }
     }
-    return {
-      item: item,
-      dist: tmin
-    };
+    out[0] = item;
+    out[1] = tmin;
+    return out;
   };
 
   RBush.prototype._all = function _all (node, result, predicate) {
