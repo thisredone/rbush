@@ -1,13 +1,18 @@
 MAX_REMOVALS_BEFORE_SWAP = 50
 
 
-class DoubleArray
-  constructor: (@size = 8) ->
+class GrowingArray
+  constructor: (@size = 8, { @double = false } = {}) ->
     @current = new Array(@size)
-    @other = new Array(@size)
+    @other = new Array(@size) if @double
     @currentLen = 0
+    @[Symbol.iterator] = ->
+      for item in [0...@currentLen]
+        yield item
+      null
 
-  push: (item, item2) ->
+
+  push: (item, items2) ->
     @enlarge() if @currentLen is @size
     @other[@currentLen] = item2 if item2?
     @current[@currentLen++] = item
@@ -17,12 +22,13 @@ class DoubleArray
 
   enlarge: ->
     @size = Math.floor(@size * 1.5)
-    @current.length = @other.length = @size
+    @current.length = @size
+    @other?.length = @size
 
 
-class ObjectStorage extends DoubleArray
-  constructor: ->
-    super(arguments...)
+class ObjectStorage extends GrowingArray
+  constructor: (size) ->
+    super(size, double: true)
     @removalsCount = 0
 
   remove: (item) ->
@@ -34,7 +40,10 @@ class ObjectStorage extends DoubleArray
     null
 
 
-class SortableStack extends DoubleArray
+class SortableStack extends GrowingArray
+  constructor: (size) ->
+    super(size, double: true)
+
   push: (item, value) ->
     @enlarge() if @currentLen is @size
     pos = 0
@@ -65,41 +74,45 @@ class RBush
     @raycastResponse = dist: Infinity, item: null
     @nonStatic = new ObjectStorage(500)
     @clear()
+    @result = new GrowingArray(32)
+    @searchPath = new GrowingArray(256)
 
   all: ->
-    @_all(@data, [])
+    @result.currentLen = 0
+    @searchPath.currentLen = 0
+    @_all(@data)
 
   search: (bbox, predicate) ->
     node = @data
-    result = []
-    return result if not intersects(bbox, node.bbox)
-    nodesToSearch = []
+    @result.currentLen = 0
+    return @result if not intersects(bbox, node.bbox)
+    @searchPath.currentLen = 0
 
     while node
       for child in node.children when not child._ignore
         if intersects(bbox, child.bbox)
           if node.leaf
-            if !predicate? or predicate(child)
-              result.push(child)
+            if not predicate? or predicate(child)
+              @result.push(child)
           else if contains(bbox, child.bbox)
-            @_all(child, result, predicate)
+            @_all(child, predicate)
           else
-            nodesToSearch.push(child)
-      node = nodesToSearch.pop()
+            @searchPath.push(child)
+      node = @searchPath.pop()
 
-    return result
+    @result
 
   collides: (bbox) ->
     node = @data
     return false if not intersects(bbox, node)
 
-    nodesToSearch = []
-    while (node)
+    @searchPath.currentLen = 0
+    while node
       for child in node.children
-        if (intersects(bbox, child.bbox))
-          return true if (node.leaf || contains(bbox, child.bbox))
-          nodesToSearch.push(child)
-      node = nodesToSearch.pop()
+        if intersects(bbox, child.bbox)
+          return true if node.leaf or contains(bbox, child.bbox)
+          @searchPath.push(child)
+      node = @searchPath.pop()
 
     return false
 
@@ -204,18 +217,21 @@ class RBush
     @raycastResponse.item = item
     @raycastResponse
 
-  _all: (node, result, predicate) ->
-    nodesToSearch = []
+  _all: (node, predicate) ->
+    i = @searchPath.currentLen
+
     while node
       if node.leaf
         for child in node.children when not child._ignore
-          if !predicate? or predicate(child)
-            result.push(child)
+          if not predicate? or predicate(child)
+            @result.push(child)
       else
-        nodesToSearch.push(...node.children)
+        for child in node.children
+          @searchPath.push(child)
 
-      node = nodesToSearch.pop()
-    result
+      break if @searchPath.currentLen is i
+      node = @searchPath.pop()
+    @result
 
   _chooseSubtree: (bbox, node) ->
     while true
