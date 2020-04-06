@@ -150,7 +150,7 @@ function startMoving() {
             tree.update(item);
         }
         // console.timeEnd('movement update')
-        draw();
+        // draw();
     }, 25);
 }
 

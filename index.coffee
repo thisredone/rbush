@@ -1,16 +1,27 @@
 MAX_REMOVALS_BEFORE_SWAP = 50
 
 
+class TmpBbox
+  CACHE_SIZE = 20
+  bboxes = []
+  nextBbox = 0
+
+  for i in [0...CACHE_SIZE]
+    bboxes.push [Infinity, Infinity, -Infinity, -Infinity]
+
+  @get: ->
+    bboxes[nextBbox++ & (CACHE_SIZE - 1)];
+
+
 class GrowingArray
   constructor: (@size = 8, { @double = false } = {}) ->
     @current = new Array(@size)
     @other = new Array(@size) if @double
     @currentLen = 0
     @[Symbol.iterator] = ->
-      for item in [0...@currentLen]
-        yield item
+      for i in [0...@currentLen]
+        yield @current[i]
       null
-
 
   push: (item, items2) ->
     @enlarge() if @currentLen is @size
@@ -24,20 +35,6 @@ class GrowingArray
     @size = Math.floor(@size * 1.5)
     @current.length = @size
     @other?.length = @size
-
-
-class ObjectStorage extends GrowingArray
-  constructor: (size) ->
-    super(size, double: true)
-    @removalsCount = 0
-
-  remove: (item) ->
-    item._removed = true
-    @removalsCount++
-
-  swap: (@currentLen) ->
-    [@current, @other, @removalsCount] = [@other, @current, 0]
-    null
 
 
 class SortableStack extends GrowingArray
@@ -63,6 +60,29 @@ class SortableStack extends GrowingArray
 
     @currentLen++
 
+
+class ObjectStorage extends GrowingArray
+  constructor: (size) ->
+    super(size, double: true)
+    @removalsCount = 0
+
+  remove: (item) ->
+    item._removed = true
+    @condense() if ++@removalsCount > Math.max(@currentLen, 50) * 0.1
+
+  condense: ->
+    newIndex = 0
+    for index in [0 ... @currentLen]
+      item = @current[index]
+      if item._removed
+        item._removed = null
+        continue
+      @other[newIndex++] = item
+    @swap newIndex
+
+  swap: (@currentLen) ->
+    [@current, @other, @removalsCount] = [@other, @current, 0]
+    null
 
 class RBush
   constructor: (maxEntries = 9) ->
@@ -119,15 +139,20 @@ class RBush
   update: (item) ->
     if contains(item.parent.bbox, item.bbox)
       return
-    @remove(item)
-    @insert(item)
+    reinsert = true
+    @remove(item, reinsert)
+    @insert(item, reinsert)
 
-  insert: (item) ->
+  insert: (item, reinsert) ->
     unless item?.bbox
       log "[RBush::insert] can't add without bbox", item
       return
+    if item._removed
+      item._removed = null
+      @nonStatic.removalsCount--
+      reinsert = true
     @_insert(item)
-    unless item.isStatic
+    unless item.isStatic or reinsert
       @nonStatic.push(item)
     this
 
@@ -135,14 +160,14 @@ class RBush
     @data = createNode([])
     this
 
-  remove: (item) ->
+  remove: (item, reinsert) ->
     return unless item?
     parent = item.parent
     index = parent.children.indexOf(item)
     if index is -1
       throw "[RBush remove] ERROR: parent doesn't have that item"
     parent.children.splice index, 1
-    unless item.isStatic
+    unless item.isStatic or reinsert
       @nonStatic.remove(item)
     @_condense(parent)
     this
@@ -157,7 +182,7 @@ class RBush
 
     for index in [0 ... currentLen]
       item = current[index]
-      continue if item._removed
+      continue if item._removed or item._ignore
       other[newIndex++] = item if swapping
       item._colRunId = @_collisionRunId
 
@@ -262,7 +287,6 @@ class RBush
     node
 
   _insert: (item) ->
-    delete item._removed
     bbox = item.bbox
 
     # find the best node for accommodating the item, saving all nodes along the path too
@@ -321,11 +345,11 @@ class RBush
 
     i = m - 1
     for i in [m..M - m]
-      node1 = distBBox(node, 0, i)
-      node2 = distBBox(node, i, M)
+      bbox1 = distBBox(node, 0, i)
+      bbox2 = distBBox(node, i, M)
 
-      overlap = intersectionArea(node1.bbox, node2.bbox)
-      area = bboxArea(node1.bbox) + bboxArea(node2.bbox)
+      overlap = intersectionArea(bbox1, bbox2)
+      area = bboxArea(bbox1) + bboxArea(bbox2)
 
       # choose distribution with minimum overlap
       if (overlap < minOverlap)
@@ -356,19 +380,19 @@ class RBush
   _allDistMargin: (node, m, M, compare) ->
     node.children.sort(compare)
 
-    leftNode = distBBox(node, 0, m)
-    rightNode = distBBox(node, M - m, M)
-    margin = bboxMargin(leftNode.bbox) + bboxMargin(rightNode.bbox)
+    leftBbox = distBBox(node, 0, m)
+    rightBbox = distBBox(node, M - m, M)
+    margin = bboxMargin(leftBbox) + bboxMargin(rightBbox)
 
     for i in [m...M - m]
       child = node.children[i]
-      extend(leftNode.bbox, child.bbox)
-      margin += bboxMargin(leftNode.bbox)
+      extend(leftBbox, child.bbox)
+      margin += bboxMargin(leftBbox)
 
     for i in [M - m - 1..m]
       child = node.children[i]
-      extend(rightNode.bbox, child.bbox)
-      margin += bboxMargin(rightNode.bbox)
+      extend(rightBbox, child.bbox)
+      margin += bboxMargin(rightBbox)
 
     margin
 
@@ -395,11 +419,11 @@ class RBush
 
 # calculate node's bbox from bboxes of its children
 calcBBox = (node) ->
-  distBBox(node, 0, node.children.length, null, node)
+  distBBox(node, 0, node.children.length, node)
 
 
 # min bounding rectangle of node children from k to p-1
-distBBox = (node, k, p, toBBox, destNode) ->
+_old_distBBox = (node, k, p, destNode) ->
   destNode ?= createNode(null)
   destNode.bbox[0] = Infinity;
   destNode.bbox[1] = Infinity;
@@ -410,6 +434,20 @@ distBBox = (node, k, p, toBBox, destNode) ->
     extend(destNode.bbox, node.children[i].bbox)
 
   destNode
+
+
+# min bounding rectangle of node children from k to p-1
+distBBox = (node, k, p, destNode) ->
+  bbox = destNode?.bbox ? TmpBbox.get()
+  bbox[0] = Infinity;
+  bbox[1] = Infinity;
+  bbox[2] = -Infinity;
+  bbox[3] = -Infinity;
+
+  for i in [k...p]
+    extend(bbox, node.children[i].bbox)
+
+  bbox
 
 
 extend = (a, b) ->

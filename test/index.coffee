@@ -35,7 +35,7 @@ move = (item, x, y) ->
 for item, i in data
   tree.insert item
 
-log tree.all().map(pp)
+log Array.from(tree.all()).map(pp)
 
 for i in [6..15]
   tree.remove data[i]
@@ -58,6 +58,6 @@ for item, i in data
   tree.insert(item)
 
 parentsAreOkay()
-log tree.all().map(pp)
+log Array.from(tree.all()).map(pp)
 
 tree.checkCollisions (o1, o2) -> log pp(o1), 'with', pp(o2)
