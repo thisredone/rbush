@@ -113,7 +113,7 @@ class RBush
     unless item?.bbox
       log "[RBush::insert] can't add without bbox", item
       return
-    @_insert(item, @data.height - 1)
+    @_insert(item)
     unless item.isStatic
       @nonStatic.push(item)
     this
@@ -217,12 +217,9 @@ class RBush
       node = nodesToSearch.pop()
     result
 
-  _chooseSubtree: (bbox, node, level, path) ->
+  _chooseSubtree: (bbox, node) ->
     while true
-      path.push(node)
-
-      if node.leaf or path.length - 1 is level
-        break
+      break if node.leaf
 
       minArea = Infinity
       minEnlargement = Infinity
@@ -246,15 +243,14 @@ class RBush
 
       node = targetNode or node.children[0]
 
-    return node
+    node
 
-  _insert: (item, level, isNode) ->
+  _insert: (item) ->
     delete item._removed
     bbox = item.bbox
-    insertPath = []
 
     # find the best node for accommodating the item, saving all nodes along the path too
-    node = @_chooseSubtree(bbox, @data, level, insertPath)
+    node = @_chooseSubtree(bbox, @data)
 
     # put the item into the node
     node.children.push(item)
@@ -262,19 +258,17 @@ class RBush
     extend(node.bbox, bbox)
 
     # split on node overflow; propagate upwards if necessary
-    while level >= 0
-      if insertPath[level].children.length > @_maxEntries
-        @_split(insertPath, level)
-        level--
-      else
-        break
+    parent = node
+    while parent?
+      if parent.children.length > @_maxEntries
+        @_split parent
+      parent = parent.parent
 
     # adjust bboxes along the insertion path
-    @_adjustParentBBoxes(bbox, insertPath, level)
+    @_adjustParentBBoxes(bbox, node.parent)
 
   # split overflowed node into two
-  _split: (insertPath, level) ->
-    node = insertPath[level]
+  _split: (node) ->
     M = node.children.length
     m = @_minEntries
 
@@ -289,10 +283,9 @@ class RBush
     calcBBox(node)
     calcBBox(newNode)
 
-    if level
-      parent = insertPath[level - 1]
-      parent.children.push(newNode)
-      newNode.parent = parent
+    if node.parent?
+      node.parent.children.push(newNode)
+      newNode.parent = node.parent
     else
       @_splitRoot(node, newNode)
 
@@ -363,11 +356,10 @@ class RBush
 
     margin
 
-  _adjustParentBBoxes: (bbox, path, level) ->
-    return if level < 0
-    # adjust bboxes along the given tree path
-    for i in [level..0]
-      extend path[i].bbox, bbox
+  _adjustParentBBoxes: (bbox, node) ->
+    while node
+      extend node.bbox, bbox
+      node = node.parent
     null
 
   _condense: (node) ->
@@ -463,5 +455,4 @@ createNode = (children) ->
   node
 
 
-# export default RBush
 module.exports = RBush

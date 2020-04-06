@@ -1,4 +1,5 @@
-import {terser} from 'rollup-plugin-terser';
+import { terser } from 'rollup-plugin-terser';
+import commonjs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
 import buble from '@rollup/plugin-buble';
 
@@ -13,7 +14,13 @@ const output = (file, plugins) => ({
     plugins
 });
 
+const plugins = [
+    resolve(),
+    commonjs(),
+    buble({ transforms: { generator: false } }),
+];
+
 export default [
-    output('rbush.js', [resolve(), buble()]),
-    output('rbush.min.js', [resolve(), buble(), terser()])
+    output('rbush.js', plugins),
+    output('rbush.min.js', [...plugins, terser()])
 ];

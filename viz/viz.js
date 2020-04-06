@@ -18,7 +18,7 @@ function randBox(size) {
         y,
         x + size * Math.random(),
         y + size * Math.random()
-    ]};
+    ], item: true };
 }
 
 function randClusterPoint(dist) {
@@ -62,7 +62,7 @@ function drawTree(node, level) {
 
     rects.push(rect);
 
-    if (node.item) { return; }
+    if (!node.children) { return; }
     if (level === 9) { return; }
 
     for (var i = 0; i < node.children.length; i++) {

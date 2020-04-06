@@ -1,5 +1,6 @@
 devDependencies:
   '@rollup/plugin-buble': 0.21.1_rollup@2.2.0
+  '@rollup/plugin-commonjs': 11.0.2_rollup@2.2.0
   '@rollup/plugin-node-resolve': 7.1.1_rollup@2.2.0
   benchmark: 2.1.4
   c8: 7.1.0
@@ -7,7 +8,6 @@ devDependencies:
   esm: 3.2.25
   mocha: 7.0.1
   pry: 0.8.7
-  quickselect: 2.0.0
   rollup: 2.2.0
   rollup-plugin-terser: 5.3.0_rollup@2.2.0
 lockfileVersion: 5.1
@@ -51,6 +51,21 @@ packages:
       rollup: ^1.20.0
     resolution:
       integrity: sha512-Tmd4V95cVyGTwh7qc9ZNkg53E/isFY4q/sqZK7mSyGajYp9Wb0gbJyZWAzYlg9kZxEHmwCDlvcHDcn56SpOCCQ==
+  /@rollup/plugin-commonjs/11.0.2_rollup@2.2.0:
+    dependencies:
+      '@rollup/pluginutils': 3.0.8_rollup@2.2.0
+      estree-walker: 1.0.1
+      is-reference: 1.1.4
+      magic-string: 0.25.7
+      resolve: 1.15.1
+      rollup: 2.2.0
+    dev: true
+    engines:
+      node: '>= 8.0.0'
+    peerDependencies:
+      rollup: ^1.20.0
+    resolution:
+      integrity: sha512-MPYGZr0qdbV5zZj8/2AuomVpnRVXRU5XKXb3HVniwRoRCreGlf5kOE081isNWeiLIi6IYkwTX9zE0/c7V8g81g==
   /@rollup/plugin-node-resolve/7.1.1_rollup@2.2.0:
     dependencies:
       '@rollup/pluginutils': 3.0.8_rollup@2.2.0
@@ -1068,10 +1083,6 @@ packages:
     dev: true
     resolution:
       integrity: sha1-1CXe2o0TaXW5M+3jYxNfYjNQgUo=
-  /quickselect/2.0.0:
-    dev: true
-    resolution:
-      integrity: sha512-RKJ22hX8mHe3Y6wH/N3wCM6BWtjaxIyyUIkpHOvfFnxdI4yD4tBXEBKSbriGujF6jnSVkJrffuo6vxACiSSxIw==
   /readable-stream/1.0.34:
     dependencies:
       core-util-is: 1.0.2
@@ -1582,6 +1593,7 @@ packages:
       integrity: sha512-92O1HWEjw27sBfgmXiixJWT5hRBp2eobqXicLtPBIDBhYB+1HpwZlXmbW2luivBJHBzki+7VyCLRtAkScbTBQA==
 specifiers:
   '@rollup/plugin-buble': ^0.21.1
+  '@rollup/plugin-commonjs': ^11.0.2
   '@rollup/plugin-node-resolve': ^7.1.1
   benchmark: ^2.1.4
   c8: ^7.1.0
@@ -1589,6 +1601,5 @@ specifiers:
   esm: ^3.2.25
   mocha: 7.0.1
   pry: ^0.8.7
-  quickselect: ^2.0.0
   rollup: ^2.2.0
   rollup-plugin-terser: ^5.3.0
