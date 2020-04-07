@@ -1,4 +1,4 @@
-{ boxIntersect2, boxIntersect3 } = require('box-intersect')
+boxIntersect = require('box-intersect')
 MAX_REMOVALS_BEFORE_SWAP = 50
 
 
@@ -229,11 +229,9 @@ class RBush
       if not leaf._removed
         leaf.overlapping.currentLen = 0
 
-    boxIntersect2 leafs, @leafNodes.currentLen, (i, j) ->
-      l1 = leafs[i]
-      l2 = leafs[j]
-      l1.overlapping.push l2
-      l2.overlapping.push l1
+    boxIntersect leafs, @leafNodes.currentLen, (leaf1, leaf2) ->
+      leaf1.overlapping.push leaf2
+      leaf2.overlapping.push leaf1
       undefined
 
     for index in [0...currentLen]
@@ -558,8 +556,8 @@ rayBboxDistance = (x, y, invdx, invdy, bbox) ->
 createNode = (children) ->
   node =
     children: children
-    height: 1,
-    leaf: true,
+    height: 1
+    leaf: true
     bbox: [Infinity, Infinity, -Infinity, -Infinity]
   if children?
     c.parent = node for c in children

@@ -2,10 +2,10 @@
   "name": "rbush",
   "version": "3.0.1",
   "description": "High-performance 2D spatial index for rectangles (based on R*-tree with bulk loading and bulk insertion algorithms)",
-  "homepage": "https://github.com/mourner/rbush",
+  "homepage": "https://github.com/thisredone/rbush",
   "repository": {
     "type": "git",
-    "url": "git://github.com/mourner/rbush.git"
+    "url": "git://github.com/thisredone/rbush.git"
   },
   "keywords": [
     "spatial",
@@ -44,10 +44,11 @@
   },
   "files": [
     "index.js",
+    "index.coffee",
     "rbush.js",
     "rbush.min.js"
   ],
   "dependencies": {
-    "box-intersect": "^1.0.2"
+    "box-intersect": "github:thisredone/box-intersect"
   }
 }
