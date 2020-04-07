@@ -5,10 +5,14 @@ import buble from '@rollup/plugin-buble';
 
 const output = (file, plugins) => ({
     input: 'index.js',
+    external: ['box-intersect'],
     output: {
         name: 'RBush',
         format: 'umd',
         indent: false,
+        globals: {
+            'box-intersect': 'boxIntersect'
+        },
         file
     },
     plugins

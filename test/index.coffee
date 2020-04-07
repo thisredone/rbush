@@ -22,7 +22,7 @@ data = [
 ].map (bbox) -> { bbox, id: ++id }
 
 
-tree = new RBush(4)
+tree = new RBush(2)
 
 
 move = (item, x, y) ->
@@ -51,13 +51,16 @@ do parentsAreOkay = ->
 for i in [6..15]
   tree.insert data[i]
 
-for item, i in data
-  d = if i > data.length / 2 then -i else i
-  move(item, d, d)
-  tree.remove(item)
-  tree.insert(item)
+
+for x in [0..15]
+  for item, i in data
+    d = if i > data.length / 2 then -i else i
+    move(item, d, d)
+    tree.update(item)
+  tree.checkCollisions (o1, o2) -> log pp(o1), 'with', pp(o2)
 
 parentsAreOkay()
-log Array.from(tree.all()).map(pp)
+# log Array.from(tree.all()).map(pp)
+
 
 tree.checkCollisions (o1, o2) -> log pp(o1), 'with', pp(o2)

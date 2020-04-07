@@ -1,3 +1,4 @@
+{ boxIntersect2, boxIntersect3 } = require('box-intersect')
 MAX_REMOVALS_BEFORE_SWAP = 50
 
 
@@ -19,9 +20,12 @@ class GrowingArray
     @other = new Array(@size) if @double
     @currentLen = 0
     @[Symbol.iterator] = ->
-      for i in [0...@currentLen]
-        yield @current[i]
-      null
+      i = 0; max = @currentLen; cur = @current
+      next: ->
+        if i < max
+          value: cur[i++], done: false
+        else
+          done: true
 
   push: (item, items2) ->
     @enlarge() if @currentLen is @size
@@ -35,6 +39,17 @@ class GrowingArray
     @size = Math.floor(@size * 1.5)
     @current.length = @size
     @other?.length = @size
+
+
+class GrowingArrayPool extends GrowingArray
+  constructor: (size, @innerSize) ->
+    super(size)
+
+  get: ->
+    @pop() or new GrowingArray(@innerSize)
+
+  release: (item) ->
+    @push item
 
 
 class SortableStack extends GrowingArray
@@ -65,6 +80,14 @@ class ObjectStorage extends GrowingArray
   constructor: (size) ->
     super(size, double: true)
     @removalsCount = 0
+    @[Symbol.iterator] = ->
+      i = 0; max = @currentLen; cur = @current
+      next: ->
+        while i < max
+          value = cur[i++]
+          if not value._removed
+            return { value, done: false }
+        done: true
 
   remove: (item) ->
     item._removed = true
@@ -84,6 +107,22 @@ class ObjectStorage extends GrowingArray
     [@current, @other, @removalsCount] = [@other, @current, 0]
     null
 
+
+class LeafNodes extends ObjectStorage
+  constructor: ->
+    super(arguments...)
+    @overlappingPool = new GrowingArrayPool(@size, Math.ceil(@size / 4))
+
+  push: (item) ->
+    super(arguments...)
+    item.overlapping ?= @overlappingPool.get()
+
+  remove: (item) ->
+    super(arguments...)
+    @overlappingPool.release item.overlapping
+    item.overlapping = null
+
+
 class RBush
   constructor: (maxEntries = 9) ->
     # max entries in a node is 9 by default; min node fill is 40% for best performance
@@ -93,9 +132,10 @@ class RBush
     @_stacks = [0..8].map -> new SortableStack(maxEntries)
     @raycastResponse = dist: Infinity, item: null
     @nonStatic = new ObjectStorage(500)
-    @clear()
     @result = new GrowingArray(32)
     @searchPath = new GrowingArray(256)
+    @leafNodes = new LeafNodes(16)
+    @clear()
 
   all: ->
     @result.currentLen = 0
@@ -139,6 +179,7 @@ class RBush
   update: (item) ->
     if contains(item.parent.bbox, item.bbox)
       return
+
     reinsert = true
     @remove(item, reinsert)
     @insert(item, reinsert)
@@ -158,6 +199,8 @@ class RBush
 
   clear: ->
     @data = createNode([])
+    @leafNodes.currentLen = 0
+    @leafNodes.push @data
     this
 
   remove: (item, reinsert) ->
@@ -180,15 +223,39 @@ class RBush
       swapping = true
       newIndex = 0
 
-    for index in [0 ... currentLen]
+    leafs = @leafNodes.current
+    for i in [0...@leafNodes.currentLen]
+      leaf = leafs[i]
+      if not leaf._removed
+        leaf.overlapping.currentLen = 0
+
+    boxIntersect2 leafs, @leafNodes.currentLen, (i, j) ->
+      l1 = leafs[i]
+      l2 = leafs[j]
+      l1.overlapping.push l2
+      l2.overlapping.push l1
+      undefined
+
+    for index in [0...currentLen]
       item = current[index]
       continue if item._removed or item._ignore
       other[newIndex++] = item if swapping
       item._colRunId = @_collisionRunId
+      leaf = item.parent
 
-      for c in item.parent.children when not c._ignore and c._colRunId isnt @_collisionRunId
+      for c in leaf.children when not c._ignore and c._colRunId isnt @_collisionRunId
         if intersects(item.bbox, c.bbox)
           cb item, c
+
+      # using iterators here is much slower
+      overlapping = leaf.overlapping
+      if overlapping.currentLen
+        for i in [0...overlapping.currentLen]
+          otherLeaf = overlapping.current[i]
+          if intersects(item.bbox, otherLeaf.bbox)
+            for c in otherLeaf.children when not c._ignore and c._colRunId isnt @_collisionRunId
+              if intersects(item.bbox, c.bbox)
+                cb item, c
       null
 
     if swapping
@@ -319,6 +386,8 @@ class RBush
     newNode = createNode(node.children.splice(splitIndex, node.children.length - splitIndex))
     newNode.height = node.height
     newNode.leaf = node.leaf
+    if newNode.leaf
+      @leafNodes.push newNode
 
     calcBBox(node)
     calcBBox(newNode)
@@ -409,6 +478,8 @@ class RBush
         if node.parent?
           siblings = node.parent.children
           siblings.splice siblings.indexOf(node), 1
+          if node.leaf
+            @leafNodes.remove node
         else
           return @clear()
       else
@@ -420,20 +491,6 @@ class RBush
 # calculate node's bbox from bboxes of its children
 calcBBox = (node) ->
   distBBox(node, 0, node.children.length, node)
-
-
-# min bounding rectangle of node children from k to p-1
-_old_distBBox = (node, k, p, destNode) ->
-  destNode ?= createNode(null)
-  destNode.bbox[0] = Infinity;
-  destNode.bbox[1] = Infinity;
-  destNode.bbox[2] = -Infinity;
-  destNode.bbox[3] = -Infinity;
-
-  for i in [k...p]
-    extend(destNode.bbox, node.children[i].bbox)
-
-  destNode
 
 
 # min bounding rectangle of node children from k to p-1

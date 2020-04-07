@@ -1,3 +1,5 @@
+dependencies:
+  box-intersect: 'link:../../../Users/red/AppData/Roaming/npm/pnpm-global/node_modules/box-intersect'
 devDependencies:
   '@rollup/plugin-buble': 0.21.1_rollup@2.2.0
   '@rollup/plugin-commonjs': 11.0.2_rollup@2.2.0
@@ -102,6 +104,10 @@ packages:
     dev: true
     resolution:
       integrity: sha512-rr+OQyAjxze7GgWrSaJwydHStIhHq2lvY3BOC2Mj7KnzI7XK0Uw1TOOdI9lDoajEbSWLiYgoo4f1R51erQfhPQ==
+  /@types/estree/0.0.39:
+    dev: true
+    resolution:
+      integrity: sha512-EYNwp3bU+98cpU4lAWYYL7Zz+2gryWH1qbdDTidVd6hkiR6weksdbMadyXKXNPEkQFhXM+hVO9ZygomHXp+AIw==
   /@types/is-windows/1.0.0:
     dev: true
     resolution:
@@ -747,6 +753,12 @@ packages:
       node: '>=0.12.0'
     resolution:
       integrity: sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==
+  /is-reference/1.1.4:
+    dependencies:
+      '@types/estree': 0.0.39
+    dev: true
+    resolution:
+      integrity: sha512-uJA/CDPO3Tao3GTrxYn6AwkM4nUPJiGGYu5+cB8qbC7WGFlrKZbiRo7SFKxUAEpFUfiHofWCXBUNhvYJMh+6zw==
   /is-regex/1.0.5:
     dependencies:
       has: 1.0.3
@@ -1596,6 +1608,7 @@ specifiers:
   '@rollup/plugin-commonjs': ^11.0.2
   '@rollup/plugin-node-resolve': ^7.1.1
   benchmark: ^2.1.4
+  box-intersect: ^1.0.2
   c8: ^7.1.0
   coffeescript: ^2.5.1
   esm: ^3.2.25
