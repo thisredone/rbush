@@ -137,15 +137,15 @@ class RBush
     @leafNodes = new LeafNodes(16)
     @clear()
 
-  all: ->
-    @result.currentLen = 0
+  all: (predicate, result = @result) ->
+    result.currentLen = 0
     @searchPath.currentLen = 0
-    @_all(@data)
+    @_all(@data, predicate, result)
 
-  search: (bbox, predicate) ->
+  search: (bbox, predicate, result = @result) ->
     node = @data
-    @result.currentLen = 0
-    return @result if not intersects(bbox, node.bbox)
+    result.currentLen = 0
+    return result if not intersects(bbox, node.bbox)
     @searchPath.currentLen = 0
 
     while node
@@ -153,14 +153,14 @@ class RBush
         if intersects(bbox, child.bbox)
           if node.leaf
             if not predicate? or predicate(child)
-              @result.push(child)
+              result.push(child)
           else if contains(bbox, child.bbox)
-            @_all(child, predicate)
+            @_all(child, predicate, result)
           else
             @searchPath.push(child)
       node = @searchPath.pop()
 
-    @result
+    result
 
   collides: (bbox) ->
     node = @data
@@ -307,21 +307,21 @@ class RBush
     @raycastResponse.item = item
     @raycastResponse
 
-  _all: (node, predicate) ->
+  _all: (node, predicate, result) ->
     i = @searchPath.currentLen
 
     while node
       if node.leaf
         for child in node.children when not child._ignore
           if not predicate? or predicate(child)
-            @result.push(child)
+            result.push(child)
       else
         for child in node.children
           @searchPath.push(child)
 
       break if @searchPath.currentLen is i
       node = @searchPath.pop()
-    @result
+    result
 
   _chooseSubtree: (bbox, node) ->
     while true
