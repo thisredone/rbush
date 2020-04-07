@@ -1,4 +1,4 @@
-boxIntersect = require('box-intersect')
+boxIntersect = require 'box-intersect'
 MAX_REMOVALS_BEFORE_SWAP = 50
 
 
@@ -564,4 +564,4 @@ createNode = (children) ->
   node
 
 
-module.exports = RBush
+module.exports = { RBush, boxIntersect, rayBboxDistance, GrowingArray, GrowingArrayPool, ObjectStorage }
