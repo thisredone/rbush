@@ -1,5 +1,57 @@
 boxIntersect = require 'box-intersect'
 MAX_REMOVALS_BEFORE_SWAP = 50
+nodesPool = null
+
+
+class ChildrenPool
+  cache = []
+
+  @init: (maxEntries) ->
+    for i in [0..maxEntries * 2]
+      cache.push new GrowingArray(2)
+    null
+
+  @get: (childrenCount) ->
+    cache[childrenCount].pop() or Array(childrenCount)
+
+  @release: (item) ->
+    cache[item.length].push(item)
+
+  @change: (old, childrenCount) ->
+    @release(old)
+    @get(childrenCount)
+
+  @splitAt: (node, index) ->
+    cs = node.children
+    @release(cs)
+    fsize = cs.length - index
+    first = @get(fsize)
+    node.children = second = @get(cs.length - fsize)
+    end = index + fsize
+    fi = 0
+    si = 0
+    for c, i in cs
+      if i >= index and i < end
+        first[fi++] = c
+      else
+        second[si++] = c
+    first
+
+  @push: (node, item) ->
+    cs = node.children
+    node.children = @change(cs, cs.length + 1)
+    for c, i in cs
+      node.children[i] = c
+    node.children[cs.length] = item
+
+  @remove: (node, subnode) ->
+    @release(subnode.children) if subnode.children?
+    cs = node.children
+    node.children = @change(cs, cs.length - 1)
+    i = 0
+    for c in cs when c isnt subnode
+      node.children[i++] = c
+    null
 
 
 class TmpBbox
@@ -136,12 +188,16 @@ class RBush
     @_maxEntries = Math.max(4, maxEntries)
     @_minEntries = Math.max(2, Math.ceil(@_maxEntries * 0.4))
     @_collisionRunId = 0
-    @_stacks = [0..8].map -> new SortableStack(maxEntries)
+    @_stacks = [0..4].map -> new SortableStack(maxEntries)
     @raycastResponse = dist: Infinity, item: null
-    @nonStatic = new ObjectStorage(500)
+    @nonStatic = new ObjectStorage(64)
     @result = new GrowingArray(32)
     @searchPath = new GrowingArray(256)
     @leafNodes = new LeafNodes(16)
+
+    ChildrenPool.init(@_maxEntries)
+    nodesPool = new GrowingArray(32)
+
     @clear()
 
   all: (predicate, result = @result) ->
@@ -195,7 +251,7 @@ class RBush
     unless item?.bbox
       log "[RBush::insert] can't add without bbox", item
       return
-    if item._removed
+    if not item.isStatic and item._removed
       item._removed = null
       @nonStatic.removalsCount--
       reinsert = true
@@ -216,7 +272,8 @@ class RBush
     index = parent.children.indexOf(item)
     if index is -1
       throw "[RBush remove] ERROR: parent doesn't have that item"
-    parent.children.splice index, 1
+    ChildrenPool.remove parent, item
+
     unless item.isStatic or reinsert
       @nonStatic.remove(item)
     @_condense(parent)
@@ -369,7 +426,8 @@ class RBush
     node = @_chooseSubtree(bbox, @data)
 
     # put the item into the node
-    node.children.push(item)
+    ChildrenPool.push node, item
+
     item.parent = node
     extend(node.bbox, bbox)
 
@@ -392,7 +450,8 @@ class RBush
 
     splitIndex = @_chooseSplitIndex(node, m, M)
 
-    newNode = createNode(node.children.splice(splitIndex, node.children.length - splitIndex))
+    newChildren = ChildrenPool.splitAt node, splitIndex
+    newNode = createNode(newChildren)
     newNode.height = node.height
     newNode.leaf = node.leaf
     if newNode.leaf
@@ -402,14 +461,18 @@ class RBush
     calcBBox(newNode)
 
     if node.parent?
-      node.parent.children.push(newNode)
+      ChildrenPool.push node.parent, newNode
       newNode.parent = node.parent
     else
       @_splitRoot(node, newNode)
 
   _splitRoot: (node, newNode) ->
     # split root node
-    @data = createNode([node, newNode])
+    cs = ChildrenPool.get(2)
+    cs[0] = node
+    cs[1] = newNode
+    @data = createNode(cs)
+
     @data.height = node.height + 1
     if @data.height is @_stacks.length
       @_stacks.push new SortableStack(@_maxEntries)
@@ -485,11 +548,12 @@ class RBush
     while node
       if node.children.length is 0
         if node.parent?
-          siblings = node.parent.children
-          siblings.splice siblings.indexOf(node), 1
+          ChildrenPool.remove node.parent, node
           if node.leaf
             @leafNodes.remove node
             @leafNodes.maybeCondense()
+          else
+            nodesPool.push(node)
         else
           return @clear()
       else
@@ -506,13 +570,16 @@ calcBBox = (node) ->
 # min bounding rectangle of node children from k to p-1
 distBBox = (node, k, p, destNode) ->
   bbox = destNode?.bbox ? TmpBbox.get()
-  bbox[0] = Infinity;
-  bbox[1] = Infinity;
-  bbox[2] = -Infinity;
-  bbox[3] = -Infinity;
+  children = node.children
+
+  c1bbox = children[k++].bbox
+  bbox[0] = c1bbox[0];
+  bbox[1] = c1bbox[1];
+  bbox[2] = c1bbox[2];
+  bbox[3] = c1bbox[3];
 
   for i in [k...p]
-    extend(bbox, node.children[i].bbox)
+    extend(bbox, children[i].bbox)
 
   bbox
 
@@ -566,13 +633,27 @@ rayBboxDistance = (x, y, invdx, invdy, bbox) ->
 
 
 createNode = (children) ->
-  node =
-    children: children
-    height: 1
-    leaf: true
-    bbox: [Infinity, Infinity, -Infinity, -Infinity]
-  if children?
-    c.parent = node for c in children
+  node = nodesPool.pop()
+
+  if node?
+    node.children = children
+    node.height = 1
+    node.leaf = true
+    node.bbox[0] =  Infinity
+    node.bbox[1] =  Infinity
+    node.bbox[2] = -Infinity
+    node.bbox[3] = -Infinity
+    node.parent = null
+
+  else
+    node =
+      children: children
+      height: 1
+      leaf: true
+      bbox: [Infinity, Infinity, -Infinity, -Infinity]
+
+  for c in children
+    c.parent = node
   node
 
 
