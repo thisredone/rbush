@@ -1,3 +1,85 @@
+## This fork
+
+- support for fast updates and removals
+- predicate function for `all`, `search`, and `raycast`
+- `{ minXm, minYm, maxXm, maxY }` changed to `bbox: [minXm, minYm, maxXm, maxY]`
+- raycasting with stack-based, ordered ray traversal algorithm from [this paper](https://www.scitepress.org/Papers/2015/53048/53048.pdf)
+- finding collisions with the help of box-intersect for cross-leaf overlaps
+- polling aggressively to avoid pressuring GC
+
+
+
+#### Exports
+
+```coffeescript
+module.exports = { RBush, boxIntersect, rayBboxDistance, GrowingArray, GrowingArrayPool, ObjectStorage }
+```
+
+
+
+#### Data format
+
+```coffeescript
+item =
+	bbox: [0, 0, 1, 1]
+  isStatic: false # static-to-static collisions aren't reported
+  ...whateverYouWant
+```
+
+
+
+#### Results
+
+`all()`, `search()` and `checkCollisions()` functions return a `GrowingArray` which implements an iterator. For maximum performance though you need to iterate manually:
+
+```coffeescript
+result = tree.search([0, 0, 1, 1])
+{ currentLen, current } = result
+for i in [0...currentLen]
+  item = current[i]
+```
+
+
+
+#### Update
+
+After changing item `bbox` issue `tree.update(item)`
+
+
+
+#### Ray casting
+
+```coffee
+origin = { x: 0, y: 0 }
+dir = { x: 1, y: 0 } # normalized
+
+response = tree.raycast origin, dir, range = Infinity, predicate
+```
+
+Raycast response is reusing the same object so the result must be consumed immediately
+
+```coffeescript
+raycastResponse = { dist: Infinity, item: null }
+```
+
+
+
+#### Checking collisions
+
+Results are packed into a ``GrowingArray` ` in a way that each two items correspond to one collision event
+
+```coffeescript
+result = @tree.checkCollisions()
+{ currentLen, current } = result
+for i in [0...currentLen] by 2
+  o1 = current[i]
+  o2 = current[i + 1]
+```
+
+
+
+
+
 RBush
 =====
 
