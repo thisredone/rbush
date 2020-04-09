@@ -94,11 +94,15 @@ class ObjectStorage extends GrowingArray
 
   remove: (item) ->
     item._removed = true
-    @condense() if ++@removalsCount > Math.max(@currentLen, 50) * 0.1
+    @removalsCount++
+
+  maybeCondense: (threshold) ->
+    if @removalsCount > (threshold ? Math.max(@currentLen, 50) * 0.1)
+      @condense()
 
   condense: ->
     newIndex = 0
-    for index in [0 ... @currentLen]
+    for index in [0...@currentLen]
       item = @current[index]
       if item._removed
         item._removed = null
@@ -218,7 +222,8 @@ class RBush
     @_condense(parent)
     this
 
-  checkCollisions: (cb) ->
+  checkCollisions: ->
+    @result.currentLen = 0
     @_collisionRunId = 0 if ++@_collisionRunId > 99999
     { other, current, currentLen, removalsCount } = @nonStatic
 
@@ -239,14 +244,16 @@ class RBush
 
     for index in [0...currentLen]
       item = current[index]
-      continue if item._removed or item._ignore
+      continue if item._removed
       other[newIndex++] = item if swapping
+      continue if item._ignore
       item._colRunId = @_collisionRunId
       leaf = item.parent
 
-      for c in leaf.children when not c._ignore and c._colRunId isnt @_collisionRunId
+      for c, i in leaf.children when not c._ignore and c._colRunId isnt @_collisionRunId
         if intersects(item.bbox, c.bbox)
-          cb item, c
+          @result.push item
+          @result.push c
 
       # using iterators here is much slower
       overlapping = leaf.overlapping
@@ -256,12 +263,13 @@ class RBush
           if intersects(item.bbox, otherLeaf.bbox)
             for c in otherLeaf.children when not c._ignore and c._colRunId isnt @_collisionRunId
               if intersects(item.bbox, c.bbox)
-                cb item, c
+                @result.push item
+                @result.push c
       null
 
     if swapping
       @nonStatic.swap(newIndex)
-    null
+    @result
 
   # _rayObjectDistance: (distToBbox, origin, dir, dstX, dstY, range, item) ->
 
@@ -481,6 +489,7 @@ class RBush
           siblings.splice siblings.indexOf(node), 1
           if node.leaf
             @leafNodes.remove node
+            @leafNodes.maybeCondense()
         else
           return @clear()
       else
