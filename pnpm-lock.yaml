@@ -1,5 +1,5 @@
 dependencies:
-  box-intersect: github.com/thisredone/box-intersect/ea41cd4f9294cfece9b3f225878b4992456215db
+  box-intersect: github.com/thisredone/box-intersect/01c3bbf7e159937c579de2d559df0dc6c078bada
 devDependencies:
   '@rollup/plugin-buble': 0.21.1_rollup@2.3.4
   '@rollup/plugin-commonjs': 11.0.2_rollup@2.3.4
@@ -116,13 +116,13 @@ packages:
     dev: true
     resolution:
       integrity: sha512-hRJD2ahnnpLgsj6KWMYSrmXkM3rm2Dl1qkx6IOFD5FnuNPXJIG5L0dhgKXCYTRMGzU4n0wImQ/xfmRc4POUFlg==
-  /@types/node/13.11.0:
+  /@types/node/13.11.1:
     dev: true
     resolution:
-      integrity: sha512-uM4mnmsIIPK/yeO+42F2RQhGUIs39K2RFmugcJANppXe6J1nvH87PvzPZYpza7Xhhs8Yn9yIAVdLZ84z61+0xQ==
+      integrity: sha512-eWQGP3qtxwL8FGneRrC5DwrJLGN4/dH1clNTuLfN81HCrxVtxRjygDTUoZJ5ASlDEeo0ppYFQjQIlXhtXpOn6g==
   /@types/resolve/0.0.8:
     dependencies:
-      '@types/node': 13.11.0
+      '@types/node': 13.11.1
     dev: true
     resolution:
       integrity: sha512-auApPaJf3NPfe18hSoJkp8EbZzer2ISk7o8mCC3M9he/a04+gbMF97NkpD2S8riMGvm4BMRI59/SZQSaLTKpsQ==
@@ -1195,7 +1195,7 @@ packages:
       rollup: 2.3.4
       rollup-pluginutils: 2.8.2
       serialize-javascript: 2.1.2
-      terser: 4.6.10
+      terser: 4.6.11
     dev: true
     peerDependencies:
       rollup: '>=0.66.0 <3'
@@ -1426,7 +1426,7 @@ packages:
       node: '>=8'
     resolution:
       integrity: sha512-oRSIpR8pxT1Wr2FquTNnGet79b3BWljqOuoW/h4oBhxJ/HUbX5nX6JSruTkvXDCFMwDPvsaTTbvMLKZWSy0R5g==
-  /terser/4.6.10:
+  /terser/4.6.11:
     dependencies:
       commander: 2.20.3
       source-map: 0.6.1
@@ -1436,7 +1436,7 @@ packages:
       node: '>=6.0.0'
     hasBin: true
     resolution:
-      integrity: sha512-qbF/3UOo11Hggsbsqm2hPa6+L4w7bkr+09FNseEe8xrcVD3APGLFqE+Oz1ZKAxjYnFsj80rLOfgAtJ0LNJjtTA==
+      integrity: sha512-76Ynm7OXUG5xhOpblhytE7X58oeNSmC8xnNhjWVo8CksHit0U0kO4hfNbPrrYwowLWFgM2n9L176VNx2QaHmtA==
   /test-exclude/6.0.0:
     dependencies:
       '@istanbuljs/schema': 0.1.2
@@ -1634,14 +1634,14 @@ packages:
       node: '>=8'
     resolution:
       integrity: sha512-92O1HWEjw27sBfgmXiixJWT5hRBp2eobqXicLtPBIDBhYB+1HpwZlXmbW2luivBJHBzki+7VyCLRtAkScbTBQA==
-  github.com/thisredone/box-intersect/ea41cd4f9294cfece9b3f225878b4992456215db:
+  github.com/thisredone/box-intersect/01c3bbf7e159937c579de2d559df0dc6c078bada:
     dependencies:
       bit-twiddle: 1.0.2
       typedarray-pool: 1.2.0
     dev: false
     name: box-intersect
     resolution:
-      tarball: 'https://codeload.github.com/thisredone/box-intersect/tar.gz/ea41cd4f9294cfece9b3f225878b4992456215db'
+      tarball: 'https://codeload.github.com/thisredone/box-intersect/tar.gz/01c3bbf7e159937c579de2d559df0dc6c078bada'
     version: 1.0.2
 specifiers:
   '@rollup/plugin-buble': ^0.21.1

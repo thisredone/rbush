@@ -1,8 +1,8 @@
 (function (global, factory) {
-typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('box-intersect')) :
-typeof define === 'function' && define.amd ? define(['box-intersect'], factory) :
-(global = global || self, global.RBush = factory(global.boxIntersect));
-}(this, (function (boxIntersect$1) { 'use strict';
+typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('box-intersect')) :
+typeof define === 'function' && define.amd ? define(['exports', 'box-intersect'], factory) :
+(global = global || self, factory(global.RBush = {}, global.boxIntersect));
+}(this, (function (exports, boxIntersect$1) { 'use strict';
 
 boxIntersect$1 = boxIntersect$1 && Object.prototype.hasOwnProperty.call(boxIntersect$1, 'default') ? boxIntersect$1['default'] : boxIntersect$1;
 
@@ -93,6 +93,10 @@ GrowingArray = /*@__PURE__*/(function () {
     this.size = Math.floor(this.size * 1.5);
     this.current.length = this.size;
     return (ref = this.other) != null ? ref.length = this.size : void 0;
+  };
+
+  GrowingArray.prototype.clear = function clear () {
+    return this.currentLen = 0;
   };
 
   return GrowingArray;
@@ -271,18 +275,22 @@ RBush = /*@__PURE__*/(function () {
     this.clear();
   }
 
-  RBush.prototype.all = function all () {
-    this.result.currentLen = 0;
+  RBush.prototype.all = function all (predicate, result) {
+    if ( result === void 0 ) result = this.result;
+
+    result.currentLen = 0;
     this.searchPath.currentLen = 0;
-    return this._all(this.data);
+    return this._all(this.data, predicate, result);
   };
 
-  RBush.prototype.search = function search (bbox, predicate) {
+  RBush.prototype.search = function search (bbox, predicate, result) {
+    if ( result === void 0 ) result = this.result;
+
     var child, j, len, node, ref;
     node = this.data;
-    this.result.currentLen = 0;
+    result.currentLen = 0;
     if (!intersects(bbox, node.bbox)) {
-      return this.result;
+      return result;
     }
     this.searchPath.currentLen = 0;
     while (node) {
@@ -293,10 +301,10 @@ RBush = /*@__PURE__*/(function () {
           if (intersects(bbox, child.bbox)) {
             if (node.leaf) {
               if ((predicate == null) || predicate(child)) {
-                this.result.push(child);
+                result.push(child);
               }
             } else if (contains(bbox, child.bbox)) {
-              this._all(child, predicate);
+              this._all(child, predicate, result);
             } else {
               this.searchPath.push(child);
             }
@@ -305,7 +313,7 @@ RBush = /*@__PURE__*/(function () {
       }
       node = this.searchPath.pop();
     }
-    return this.result;
+    return result;
   };
 
   RBush.prototype.collides = function collides (bbox) {
@@ -516,7 +524,7 @@ RBush = /*@__PURE__*/(function () {
     return this.raycastResponse;
   };
 
-  RBush.prototype._all = function _all (node, predicate) {
+  RBush.prototype._all = function _all (node, predicate, result) {
     var child, i, j, l, len, len1, ref, ref1;
     i = this.searchPath.currentLen;
     while (node) {
@@ -526,7 +534,7 @@ RBush = /*@__PURE__*/(function () {
           child = ref[j];
           if (!child._ignore) {
             if ((predicate == null) || predicate(child)) {
-              this.result.push(child);
+              result.push(child);
             }
           }
         }
@@ -542,7 +550,7 @@ RBush = /*@__PURE__*/(function () {
       }
       node = this.searchPath.pop();
     }
-    return this.result;
+    return result;
   };
 
   RBush.prototype._chooseSubtree = function _chooseSubtree (bbox, node) {
@@ -820,8 +828,22 @@ createNode = function(children) {
   return node;
 };
 
-var rbush = RBush;
+var rbush = {RBush: RBush, boxIntersect: boxIntersect, rayBboxDistance: rayBboxDistance, GrowingArray: GrowingArray, GrowingArrayPool: GrowingArrayPool, ObjectStorage: ObjectStorage};
+var rbush_1 = rbush.RBush;
+var rbush_2 = rbush.boxIntersect;
+var rbush_3 = rbush.rayBboxDistance;
+var rbush_4 = rbush.GrowingArray;
+var rbush_5 = rbush.GrowingArrayPool;
+var rbush_6 = rbush.ObjectStorage;
 
-return rbush;
+exports.GrowingArray = rbush_4;
+exports.GrowingArrayPool = rbush_5;
+exports.ObjectStorage = rbush_6;
+exports.RBush = rbush_1;
+exports.boxIntersect = rbush_2;
+exports.default = rbush;
+exports.rayBboxDistance = rbush_3;
+
+Object.defineProperty(exports, '__esModule', { value: true });
 
 })));

@@ -40,6 +40,9 @@ class GrowingArray
     @current.length = @size
     @other?.length = @size
 
+  clear: ->
+    @currentLen = 0
+
 
 class GrowingArrayPool extends GrowingArray
   constructor: (size, @innerSize) ->
