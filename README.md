@@ -21,7 +21,7 @@ module.exports = { RBush, boxIntersect, rayBboxDistance, GrowingArray, GrowingAr
 
 ```coffeescript
 item =
-	bbox: [0, 0, 1, 1]
+  bbox: [0, 0, 1, 1]
   isStatic: false # static-to-static collisions aren't reported
   ...whateverYouWant
 ```
@@ -66,7 +66,7 @@ raycastResponse = { dist: Infinity, item: null }
 
 #### Checking collisions
 
-Results are packed into a ``GrowingArray` ` in a way that each two items correspond to one collision event
+Results are packed into a `GrowingArray` in a way that each two items correspond to one collision event
 
 ```coffeescript
 result = @tree.checkCollisions()
@@ -77,7 +77,8 @@ for i in [0...currentLen] by 2
 ```
 
 
-
+Original readme below
+------------
 
 
 RBush
