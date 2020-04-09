@@ -138,9 +138,9 @@ class RBush
     @_collisionRunId = 0
     @_stacks = [0..8].map -> new SortableStack(maxEntries)
     @raycastResponse = dist: Infinity, item: null
-    @nonStatic = new ObjectStorage(500)
+    @nonStatic = new ObjectStorage(64)
     @result = new GrowingArray(32)
-    @searchPath = new GrowingArray(256)
+    @searchPath = new GrowingArray(32)
     @leafNodes = new LeafNodes(16)
     @clear()
 
@@ -195,7 +195,7 @@ class RBush
     unless item?.bbox
       log "[RBush::insert] can't add without bbox", item
       return
-    if item._removed
+    if not item.isStatic and item._removed
       item._removed = null
       @nonStatic.removalsCount--
       reinsert = true
@@ -571,8 +571,9 @@ createNode = (children) ->
     height: 1
     leaf: true
     bbox: [Infinity, Infinity, -Infinity, -Infinity]
-  if children?
-    c.parent = node for c in children
+
+  for c in children
+    c.parent = node
   node
 
 
