@@ -30,7 +30,15 @@ item =
 
 #### Results
 
-`all()`, `search()` and `checkCollisions()` functions return a `GrowingArray` which implements an iterator. For maximum performance though you need to iterate manually:
+`all()`, `search()` and `checkCollisions()` functions return a `GrowingArray` which implements an iterator.
+
+```javascript
+for(let item of tree.search([0, 0, 1, 1])) {
+	// do something
+}
+```
+
+For maximum performance though you need to iterate manually:
 
 ```coffeescript
 result = tree.search([0, 0, 1, 1])
@@ -75,6 +83,47 @@ for i in [0...currentLen] by 2
   o1 = current[i]
   o2 = current[i + 1]
 ```
+
+
+
+#### ObjectStorage
+
+This is the underlying structure that holds `tree.nonStatic` objects as well as `tree.leafNodes`. The purpose of it is to be able to store objects that change a lot in an array without paying much of the GC and CPU cost but using more memory. By calling  `storage.remove(item)` objects are marked as `_removed` which makes them ignored in further iteration.
+
+Periodically calling `storage.maybeCondense(threshold)` or directly `storage.condense()`, for example if `storage.removalCount` is higher than some value, migrates the not `_removed` objects to an auxiliary array and swaps them afterwards. For `tree.nonStatic` objects a version of this process is integrated into `tree.checkCollisions()`. Since all are iterated anyway the cost of condensing is minimal.
+
+###### API
+
+```coffeescript
+storage = new ObjectStorage(startingSize = 64)
+
+storage.push(item)
+
+item = storage.pop()
+
+storage.clear()
+
+# calls .condense() if .removalsCount > threshold
+# by default threshold is the bigger of 50 or 10% of .currentLen
+storaget.maybeCondense(threshold)
+
+# get's rid of holes created by removing items
+storage.condense()
+
+# iteration with a iterator (in JS it's `in` instead of `from`)
+for item from storage
+  # do stuff
+
+# manual iteration
+{ current, currentLen } = storage
+for i in [0...currentLen]
+  item = current[i]
+  if not item._removed
+    # do stuff
+```
+
+
+
 
 
 Original readme below
