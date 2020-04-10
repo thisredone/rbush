@@ -3,16 +3,24 @@
 - support for fast updates and removals
 - predicate function for `all`, `search`, and `raycast`
 - `{ minXm, minYm, maxXm, maxY }` changed to `bbox: [minXm, minYm, maxXm, maxY]`
-- raycasting with stack-based, ordered ray traversal algorithm from [this paper](https://www.scitepress.org/Papers/2015/53048/53048.pdf)
+- ray casting with stack-based, ordered ray traversal algorithm from [this paper](https://www.scitepress.org/Papers/2015/53048/53048.pdf)
 - finding collisions with the help of box-intersect for cross-leaf overlaps
 - polling aggressively to avoid pressuring GC
 
 
 
+#### Install
+
+```bash
+npm install rbush-full
+```
+
+
+
 #### Exports
 
-```coffeescript
-module.exports = { RBush, boxIntersect, rayBboxDistance, GrowingArray, GrowingArrayPool, ObjectStorage }
+```javascript
+const { RBush, boxIntersect, rayBboxDistance, GrowingArray, GrowingArrayPool, ObjectStorage } = require('rbush-full/rbush.js')
 ```
 
 

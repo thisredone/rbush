@@ -199,7 +199,11 @@ ObjectStorage = /*@__PURE__*/(function (GrowingArray) {
 
   ObjectStorage.prototype.remove = function remove (item) {
     item._removed = true;
-    if (++this.removalsCount > Math.max(this.currentLen, 50) * 0.1) {
+    return this.removalsCount++;
+  };
+
+  ObjectStorage.prototype.maybeCondense = function maybeCondense (threshold) {
+    if (this.removalsCount > (threshold != null ? threshold : Math.max(this.currentLen, 50) * 0.1)) {
       return this.condense();
     }
   };
@@ -268,9 +272,9 @@ RBush = /*@__PURE__*/(function () {
       dist: 2e308,
       item: null
     };
-    this.nonStatic = new ObjectStorage(500);
+    this.nonStatic = new ObjectStorage(64);
     this.result = new GrowingArray(32);
-    this.searchPath = new GrowingArray(256);
+    this.searchPath = new GrowingArray(32);
     this.leafNodes = new LeafNodes(16);
     this.clear();
   }
@@ -354,7 +358,7 @@ RBush = /*@__PURE__*/(function () {
       log("[RBush::insert] can't add without bbox", item);
       return;
     }
-    if (item._removed) {
+    if (!item.isStatic && item._removed) {
       item._removed = null;
       this.nonStatic.removalsCount--;
       reinsert = true;
@@ -391,10 +395,11 @@ RBush = /*@__PURE__*/(function () {
     return this;
   };
 
-  RBush.prototype.checkCollisions = function checkCollisions (cb) {
+  RBush.prototype.checkCollisions = function checkCollisions () {
     var assign;
 
     var c, current, currentLen, i, index, item, j, l, leaf, leafs, len, len1, n, newIndex, o, other, otherLeaf, overlapping, q, ref, ref1, ref2, ref3, ref4, removalsCount, swapping;
+    this.result.currentLen = 0;
     if (++this._collisionRunId > 99999) {
       this._collisionRunId = 0;
     }
@@ -417,20 +422,24 @@ RBush = /*@__PURE__*/(function () {
     });
     for (index = l = 0, ref1 = currentLen; (0 <= ref1 ? l < ref1 : l > ref1); index = 0 <= ref1 ? ++l : --l) {
       item = current[index];
-      if (item._removed || item._ignore) {
+      if (item._removed) {
         continue;
       }
       if (swapping) {
         other[newIndex++] = item;
       }
+      if (item._ignore) {
+        continue;
+      }
       item._colRunId = this._collisionRunId;
       leaf = item.parent;
       ref2 = leaf.children;
-      for (n = 0, len = ref2.length; n < len; n++) {
-        c = ref2[n];
+      for (i = n = 0, len = ref2.length; n < len; i = ++n) {
+        c = ref2[i];
         if (!c._ignore && c._colRunId !== this._collisionRunId) {
           if (intersects(item.bbox, c.bbox)) {
-            cb(item, c);
+            this.result.push(item);
+            this.result.push(c);
           }
         }
       }
@@ -445,7 +454,8 @@ RBush = /*@__PURE__*/(function () {
               c = ref4[q];
               if (!c._ignore && c._colRunId !== this._collisionRunId) {
                 if (intersects(item.bbox, c.bbox)) {
-                  cb(item, c);
+                  this.result.push(item);
+                  this.result.push(c);
                 }
               }
             }
@@ -456,7 +466,7 @@ RBush = /*@__PURE__*/(function () {
     if (swapping) {
       this.nonStatic.swap(newIndex);
     }
-    return null;
+    return this.result;
   };
 
   // _rayObjectDistance: (distToBbox, origin, dir, dstX, dstY, range, item) ->
@@ -723,6 +733,7 @@ RBush = /*@__PURE__*/(function () {
           siblings.splice(siblings.indexOf(node), 1);
           if (node.leaf) {
             this.leafNodes.remove(node);
+            this.leafNodes.maybeCondense();
           }
         } else {
           return this.clear();
@@ -819,11 +830,9 @@ createNode = function(children) {
     leaf: true,
     bbox: [2e308, 2e308, -2e308, -2e308]
   };
-  if (children != null) {
-    for (j = 0, len = children.length; j < len; j++) {
-      c = children[j];
-      c.parent = node;
-    }
+  for (j = 0, len = children.length; j < len; j++) {
+    c = children[j];
+    c.parent = node;
   }
   return node;
 };
